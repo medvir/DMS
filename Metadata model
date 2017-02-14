@@ -1,5 +1,5 @@
-Exp.Type. > MISEQ_RUNS
-Sam.Type. > MISEQ_RUN
+#Exp.Type. > MISEQ_RUNS
+##Sam.Type. > MISEQ_RUN
 Properties:	Investigator_Name
 Experiment_Name
 Date (mm/dd/yyyy)
@@ -15,8 +15,8 @@ RGT_Box_1
 RGT_Box_2
 
 
-Exp.Type. > MISEQ_SAMPLES
-Sam.Type. > MISEQ_SAMPLE
+#Exp.Type. > MISEQ_SAMPLES
+##Sam.Type. > MISEQ_SAMPLE
 Child of:	MISEQ_RUN
 Properties:	Sample_ID (int)
 Sample_Name
@@ -30,8 +30,8 @@ Sample_Project
 Description
 
 
-Exp.Type > RESISTANCE_TESTS
-Sam.Type.> RESISTANCE_TEST
+#Exp.Type > RESISTANCE_TESTS
+##Sam.Type.> RESISTANCE_TEST
 Child of:	MISEQ_SAMPLE
 Properties:	Virus
 Target
