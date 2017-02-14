@@ -1,9 +1,9 @@
 # Space ?
-# Project ?
+## Project ?
 
 ***
 
-## Exp.Type. > MISEQ_RUNS
+### Exp.Type. > MISEQ_RUNS
 ### Sam.Type. > MISEQ_RUN
 Properties:
 - Investigator_Name
@@ -22,7 +22,7 @@ Properties:
 
 ***
 
-## Exp.Type. > MISEQ_SAMPLES
+### Exp.Type. > MISEQ_SAMPLES
 ### Sam.Type. > MISEQ_SAMPLE
 `Child of:	MISEQ_RUN`
 
@@ -40,7 +40,7 @@ Properties:
 
 ***
 
-## Exp.Type > RESISTANCE_TESTS
+### Exp.Type > RESISTANCE_TESTS
 ### Sam.Type.> RESISTANCE_TEST
 `Child of:	MISEQ_SAMPLE`
 
