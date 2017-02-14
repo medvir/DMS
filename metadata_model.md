@@ -19,9 +19,10 @@ Properties:
 - RGT_Box_2
 
 
+
 ## Exp.Type. > MISEQ_SAMPLES
 ### Sam.Type. > MISEQ_SAMPLE
-'Child of:	MISEQ_RUN'
+`Child of:	MISEQ_RUN`
 Properties:	
 - Sample_ID (int)
 - Sample_Name
@@ -38,6 +39,7 @@ Properties:
 ## Exp.Type > RESISTANCE_TESTS
 ### Sam.Type.> RESISTANCE_TEST
 'Child of:	MISEQ_SAMPLE'
+
 Properties:
 - Virus
 - Target
