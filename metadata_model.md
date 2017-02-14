@@ -1,6 +1,8 @@
 # Space ?
 # Project ?
 
+***
+
 ## Exp.Type. > MISEQ_RUNS
 ### Sam.Type. > MISEQ_RUN
 Properties:
@@ -18,11 +20,12 @@ Properties:
 - RGT_Box_1
 - RGT_Box_2
 
-
+***
 
 ## Exp.Type. > MISEQ_SAMPLES
 ### Sam.Type. > MISEQ_SAMPLE
 `Child of:	MISEQ_RUN`
+
 Properties:	
 - Sample_ID (int)
 - Sample_Name
@@ -35,10 +38,11 @@ Properties:
 - Sample_Project
 - Description
 
+***
 
 ## Exp.Type > RESISTANCE_TESTS
 ### Sam.Type.> RESISTANCE_TEST
-'Child of:	MISEQ_SAMPLE'
+`Child of:	MISEQ_SAMPLE`
 
 Properties:
 - Virus
