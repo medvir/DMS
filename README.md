@@ -8,4 +8,4 @@ Infos and scripts for implementing openBIS at the IMV
 `backup2nc.sh` and `backup_script.sh`
 
 ### Scripts for openBIS
-`SampleSheet2openBIS.sh` Convert MiSeq SampleSheet into properties file togheter wiht raw fastq reads in separate directories for import into openBIS
+`SampleSheet2openBIS.sh` Convert MiSeq SampleSheet into properties file together with raw fastq reads in separate directories for import into openBIS.
