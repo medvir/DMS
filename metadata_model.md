@@ -1,5 +1,8 @@
-# Space ?
-## Project ?
+# Spaces/Projects
+- DIAGNOSTICS
+  - RESISTANCE_TEST
+  - METAGENOMICS
+- RESEARCH 
 
 ***
 
@@ -35,7 +38,6 @@ Properties:
 - Index
 - I5_Index_ID
 - Index2
-- Sample_Project
 - Description
 
 ***
@@ -45,6 +47,7 @@ Properties:
 `Child of:	MISEQ_SAMPLE`
 
 Properties:
+- Sample_Name
 - Virus
 - Target
 - Genotype
