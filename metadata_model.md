@@ -1,5 +1,8 @@
-# Space ?
-## Project ?
+# Spaces/Projects
+- DIAGNOSTICS
+  - RESISTANCE_TEST
+  - METAGENOMICS
+- RESEARCH 
 
 ***
 
