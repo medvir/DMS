@@ -1,9 +1,9 @@
 #!/bin/bash
 
 incomingdir=/cygdrive/D/Illumina/MiSeqOutput
-incomingdir=$(pwd)
+incomingdir=/Users/ozagordi/openBIS
 bufferdir=/cygdrive/D/BufferDir
-bufferdir=/tmp
+bufferdir=/tmp/parse_samples/
 
 # define these globally so no need to pass it as a function parameter
 headers='undefined'
@@ -28,26 +28,30 @@ write_miseq_run(){
     mkdir -p $dest
     prop_file=${dest}/dataset.properties
     touch $prop_file
-    printf "Space=$2" >> $prop_file
-    printf "Investigator_Name=$Investigator_Name" >> $prop_file
-    printf "Experiment_Name=$Experiment_Name" >> $prop_file
-    printf "Date=$Date" >> $prop_file
-    printf "Workflow=$Workflow" >> $prop_file
-    printf "Application=$Application" >> $prop_file
-    printf "Assay=$Assay" >> $prop_file
+
+    ### sample_type MISEQ_RUN
+
+    # Space is taken from "Description" field in SampleSheet
+    printf "Space=$2\n" >> $prop_file
+    printf "IEMFileVersion=$IEMFileVersion\n" >> $prop_file
+    printf "Investigator_Name=$Investigator_Name\n" >> $prop_file
+    printf "Experiment_Name=$Experiment_Name\n" >> $prop_file
+    printf "Date=$Date\n" >> $prop_file
+    printf "Workflow=$Workflow\n" >> $prop_file
+    printf "Application=$Application\n" >> $prop_file
+    printf "Assay=$Assay\n" >> $prop_file
     printf "Chemistry=$Chemistry\n" >> $prop_file
     printf "Read1=$Read1\n" >> $prop_file
     printf "Read2=$Read2\n" >> $prop_file
     printf "PhiX=$PhiX" >> $prop_file
-    printf "RGT_Box_1=$RGT_Box_1" >> $prop_file
-    printf "RGT_Box_2=$RGT_Box_2" >> $prop_file
-
+    printf "RGT_Box_1=$RGT_Box_1\n" >> $prop_file
+    printf "RGT_Box_2=$RGT_Box_2\n" >> $prop_file
 
 }
 
-process_sample(){
+write_miseq_sample(){
     # input is a line in section [Data] of the samples sheet
-    # copy fastq file into $bufferdir/$rundir/S.../ and write file dataset.properties
+    # copy fastq file into $bufferdir/$rundir/S.../ and write dataset.properties
 
     declare -a sample_line=("${!1}")
 
@@ -56,6 +60,12 @@ process_sample(){
     ### move fastq file into folder
     sample_number=${sample_line[0]}
     sample_name=${sample_line[1]}
+    sample_plate=${sample_line[2]}
+    sample_well=${sample_line[3]}
+    I7_index_id=${sample_line[4]}
+    index=${sample_line[5]}
+    I5_index_id=${sample_line[6]}
+    index2=${sample_line[7]}
 
     ### create folder S.. in $dest
     dest=$bufferdir/${rundir}_S${sample_number}
@@ -71,27 +81,36 @@ process_sample(){
     touch $prop_file
 
     ### space and project
-    printf "Space=Routine\n" >> $prop_file
-    printf "Project=Resistance_Testing\n" >> $prop_file
+    if [[ $Description == 'Mixed' ]]; then
+        # space is Diagnostics if sample_name is a MOLIS number
+        if [[ ($sample_name =~ ^1000) ]];then
+            Space='Diagnostics'
+        else
+            Space='Research'
+        fi
+    else
+        Space=$Description
+    fi
 
-    ### sample_type MISEQ_RUN
-    printf "IEMFileVersion=$IEMFileVersion\n" >> $prop_file
-    printf "Investigator_Name=$Investigator_Name\n" >> $prop_file
-    printf "Experiment_Name=$Experiment_Name\n" >> $prop_file
-    printf "Date=$Date\n" >> $prop_file
-    printf "Workflow=$Workflow\n" >> $prop_file
-    printf "Application=$Application\n" >> $prop_file
-    printf "Assay=$Assay\n">> $prop_file
-    printf "Description=$Description\n" >> $prop_file
-    printf "Chemistry=$Chemistry\n" >> $prop_file
-    printf "Read1=$Read1\n" >> $prop_file
-    printf "Read2=$Read2\n" >> $prop_file
+    if [[ $Space == 'Diagnostics' ]]; then
+        # only two projects now in Diagnostics:
+        # Resistance_Testing if column 9 is a virus, else Metagenomics
+        if [[ ${sample_line[10]} =~ ^(HCV|HIV-1)$ ]]; then
+            Project='Resistance_Testing'
+        else
+            Project='Metagenomics'
+    else
+        # for now Space=Research only has Project=Research
+        Project='Research'
 
     ### sample_type MISEQ_SAMPLE
-    printf "Sample_ID=${i}\n" >> $prop_file
+    printf "Space=$Space\n" >> $prop_file
+    printf "Project=$Project\n" >> $prop_file
+
+    printf "Sample_ID=${sample_number}\n" >> $prop_file
 
     Sample_Name_i=$(eval echo "\$Sample_Name_${i}")
-    printf "Sample_Name=${Sample_Name_i}\n" >> $prop_file
+    printf "Sample_Name=${sample_name}\n" >> $prop_file
 
     Sample_Plate_i=$(eval echo "\$Sample_Plate_${i}")
     printf "Sample_Plate=${Sample_Plate_i}\n" >> $prop_file
@@ -130,7 +149,7 @@ process_runs(){
     headers='undefined'
 
     ### remove spaces in sample sheet
-    sed -e "s/ /_/g" < $rundir/Data/Intensities/BaseCalls/SampleSheet.csv > sample_sheet.tmp
+    sed -e "s/ /_/g" < $incomingdir/$rundir/Data/Intensities/BaseCalls/SampleSheet.csv > sample_sheet.tmp
 
     ### counters for read 1/2 and samples
     r=0
@@ -152,6 +171,11 @@ process_runs(){
         ### [Reads] section for read 1
         elif [[ $section == "[Reads]" && ${line[0]} =~ ^[0-9]+$ && $r -eq 0 ]]
         then
+            # [Header] has now been parsed, if Description not in Res|Dia|Mix
+            # then stop parsing this file and go to next run
+            if [[ !("$Description" =~ ^(Research|Diagnostics|Mixed)$) ]]; then
+                break
+            fi
             r=1
             # echo $section ${line[0]}
             Read1=${line[0]}
@@ -167,17 +191,19 @@ process_runs(){
         elif [[ $section == "[Data]" && ${line[1]} && $s -eq 0 ]]
         then
             headers=( "${line[@]}" )
-            echo -e '  Found headers' ${headers[@]}
+            echo -e '  Headers found:' ${headers[@]}
             ((s+=1))
 
         ### [Data] section values
         elif [[ $section == "[Data]" && ${line[1]} && $s -gt 0 ]]
         then
-            process_sample line[@]
+            write_miseq_sample line[@]
             ((s+=1))
         fi
     done < sample_sheet.tmp
 
+    # deals with Mixed|Diagnostics|Research cases and prevents the upload
+    # of samples from external collaborators
     if [[ $Description == 'Mixed' ]]; then
         write_miseq_run ${rundir}_DIA Diagnostics
         write_miseq_run ${rundir}_RES Research
@@ -185,6 +211,7 @@ process_runs(){
         write_miseq_run ${rundir}_DIA Diagnostics
     elif [[ $Description == 'Research' ]]; then
         write_miseq_run ${rundir}_RES Research
+    fi
 
     # reset [Header] and [Reads] information
     Investigator_Name='undefined'
@@ -204,14 +231,14 @@ process_runs(){
     ### remove temporary file
     rm sample_sheet.tmp
 }
-
-### main loop over all runs in $incomingdir
-for run in $(ls $incomingdir); do
-    if [[ -d $run ]]
+echo 'GO!'
+### main loop over all dirs in $incomingdir starting with "1"
+#for run in $(find $incomingdir -type d -name "1*" -depth 1); do
+for rundir in $(ls $incomingdir); do
+    if [[ -d $incomingdir/$rundir ]]
     then
         echo -e "\033[1;31m================================================================================\033[0m"
-        echo 'Now syncing:' $run
-        rundir=$run
+        echo 'Now syncing:' $rundir
         process_runs $rundir
     fi
 done
