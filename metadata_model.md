@@ -9,6 +9,7 @@
 ### Exp.Type. > MISEQ_RUNS
 ### Sam.Type. > MISEQ_RUN
 Properties:
+- Run Name
 - Investigator_Name
 - Experiment_Name
 - Date (mm/dd/yyyy)
