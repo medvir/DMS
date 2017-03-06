@@ -2,14 +2,16 @@
 - DIAGNOSTICS
   - RESISTANCE_TEST
   - METAGENOMICS
-- RESEARCH 
+- RESEARCH
+  - ANTIBODIES
+  - OTHER
 
 ***
 
 ### Exp.Type. > MISEQ_RUNS
 ### Sam.Type. > MISEQ_RUN
 Properties:
-- Run Name
+- Run Name (170303_M01274_0174_000000000-AT5N6)
 - Investigator_Name
 - Experiment_Name
 - Date (mm/dd/yyyy)
