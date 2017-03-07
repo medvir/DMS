@@ -6,8 +6,12 @@ Date,2/14/2017,,,,,,,,,,,,,
 Workflow,GenerateFASTQ,,,,,,,,,,,,,
 Application,FASTQ Only,,,,,,,,,,,,,
 Assay,Nextera XT,,,,,,,,,,,,,
-Description,Diagnostics,,,,,,,,,,,,,
+Description,Whatever,,,,,,,,,,,,,
 Chemistry,Amplicon,,,,,,,,,,,,,
+PhiX,,,,,,,,,,,,,,
+RGT_box1,,,,,,,,,,,,,,
+RGT_box2,,,,,,,,,,,,,,
+openbis,y,,,,,,,,,,,,,
 ,,,,,,,,,,,,,,
 [Reads],,,,,,,,,,,,,,
 151,,,,,,,,,,,,,,
@@ -17,15 +21,15 @@ ReverseComplement,0,,,,,,,,,,,,,
 Adapter,CTGTCTCTTATACACATCT,,,,,,,,,,,,,
 ,,,,,,,,,,,,,,
 [Data],,,,,,,,,,,,,,
-Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description,Add_1,Add_2,Add_3,Add_4,Add_5
-1,1000243029_UR_1_1,,,N701,TAAGGCGA,S507,AAGGAGTA,,,Add_1,Add_2,Add_3,Add_4,Add_5
-2,1000243029_UR_1_2,,,N702,CGTACTAG,S507,AAGGAGTA,,,Add_1,Add_2,Add_3,Add_4,Add_5
-3,1000235002_BE_2_1,,,N703,AGGCAGAA,S508,CTAAGCCT,,,Add_1,Add_2,Add_3,Add_4,Add_5
-4,1000235002_BE_2_2,,,N704,TCCTGAGC,S508,CTAAGCCT,,,Add_1,Add_2,Add_3,Add_4,Add_5
-5,1000239926_BE_3_1,,,N705,GGACTCCT,S503,TATCCTCT ,,,Add_1,Add_2,Add_3,Add_4,Add_5
-6,1000239926_BE_3_2,,,N707,CTCTCTAC,S503,TATCCTCT ,,,Add_1,Add_2,Add_3,Add_4,Add_5
-7,1000234592_BE_4_1,,,N709,GCTACGCT,S504,AGAGTAGA ,,,Add_1,Add_2,Add_3,Add_4,Add_5
-8,1000234592_BE_4_2,,,N710,CGAGGCTG,S504,AGAGTAGA ,,,Add_1,Add_2,Add_3,Add_4,Add_5
-9,Viral_multiplex_reagent_5_1,,,N711,AAGAGGCA ,S506,ACTGCATA ,,,Add_1,Add_2,Add_3,Add_4,Add_5
-10,Viral_multiplex_reagent_5_2,,,N712,GTAGAGGA ,S506,ACTGCATA ,,,Add_1,Add_2,Add_3,Add_4,Add_5
-11,random_neg_1_100,,,N712,GTAGAGGA ,S508,CTAAGCCT,,,Add_1,Add_2,Add_3,Add_4,Add_5
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description,virus,genotype,target,viral_load,timavo
+1,1000243029_UR_1_1,,,N701,TAAGGCGA,S507,AAGGAGTA,Metagenomics,,,,,,y
+2,1000243029_UR_1_2,,,N702,CGTACTAG,S507,AAGGAGTA,Metagenomics,,,,,,y
+3,1000235002_BE_2_1,,,N703,AGGCAGAA,S508,CTAAGCCT,Metagenomics,,,,,,y
+4,1000235002_BE_2_2,,,N704,TCCTGAGC,S508,CTAAGCCT,Metagenomics,,,,,,y
+5,1000239926_BE_3_1,,,N705,GGACTCCT,S503,TATCCTCT ,Metagenomics,,,,,,y
+6,1000239926_BE_3_2,,,N707,CTCTCTAC,S503,TATCCTCT ,Metagenomics,,,,,,y
+7,1000234592_BE_4_1,,,N709,GCTACGCT,S504,AGAGTAGA ,Metagenomics,,,,,,y
+8,1000234592_BE_4_2,,,N710,CGAGGCTG,S504,AGAGTAGA ,Metagenomics,,,,,,y
+9,Viral_multiplex_reagent_5_1,,,N711,AAGAGGCA ,S506,ACTGCATA ,Metagenomics,,,,,,y
+10,Viral_multiplex_reagent_5_2,,,N712,GTAGAGGA ,S506,ACTGCATA ,Metagenomics,,,,,,y
+11,random_neg_1_100,,,N712,GTAGAGGA ,S508,CTAAGCCT,Metagenomics,,,,,,y

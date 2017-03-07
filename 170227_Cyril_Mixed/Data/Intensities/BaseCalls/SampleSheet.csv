@@ -1,0 +1,41 @@
+[Header],,,,,,,,,,,,,,
+IEMFileVersion,4,,,,,,,,,,,,,
+Investigator Name,Cyril Shah,,,,,,,,,,,,,
+Experiment Name,Name1,,,,,,,,,,,,,
+Date,27/2/2017,,,,,,,,,,,,,
+Workflow,GenerateFASTQ,,,,,,,,,,,,,
+Application,FASTQ Only,,,,,,,,,,,,,
+Assay,Nextera XT,,,,,,,,,,,,,
+Description,Free,,,,,,,,,,,,,
+Chemistry,Amplicon,,,,,,,,,,,,,
+PhiX,5,,,,,,,,,,,,,
+RGT_box1,RGT123,,,,,,,,,,,,,
+RGT_box2,RGT321,,,,,,,,,,,,,
+openbis,y,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+[Reads],,,,,,,,,,,,,,
+151,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+[Settings],,,,,,,,,,,,,,
+ReverseComplement,0,,,,,,,,,,,,,
+Adapter,CTGTCTCTTATACACATCT,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+[Data],,,,,,,,,,,,,,
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description,virus,genotype,target,viral_load,timavo
+1,1000012345,,,N702,CGTACTAG,S505,GTAAGGAG,Resistance,,HIV-1,,PRRT-IN,12000,n
+2,1000012346,,,N703,AGGCAGAA,S506,ACTGCATA,Resistance,,HIV-1,,PRRT-IN,2000,n
+3,1000012347,,,N704,TCCTGAGC,S507,AAGGAGTA,Resistance,,HIV-1,,PRRT-IN,1000,n
+4,1000012348,,,N705,GGACTCCT,S508,CTAAGCCT,Resistance,,HIV-1,,PRRT-IN,1000,n
+5,1000012349,,,N711,AAGAGGCA,S517,GCGTAAGA,Resistance,,HIV-1,,PRRT-IN,1000,n
+6,1000012350,,,N712,GTAGAGGA,S502,CTCTCTAT,Resistance,,HIV-1,,PRRT-IN,1000,n
+7,1000012351,,,N701,TAAGGCGA,S503,TATCCTCT,Resistance,,HIV-1,,PRRT-IN,1000,n
+8,1000012352,,,N702,CGTACTAG,S504,AGAGTAGA,Resistance,,HIV-1,,PRRT-IN,1000,n
+9,1000012353,,,N703,AGGCAGAA,S505,GTAAGGAG,Resistance,,HIV-1,,PRRT-IN,1000,n
+10,1000012354,,,N704,TCCTGAGC,S506,ACTGCATA,Resistance,,HIV-1,,PRRT-IN,1000,n
+11,1000012355,,,N705,GGACTCCT,S507,AAGGAGTA,Resistance,,HIV-1,,PRRT-IN,1000,n
+12,1000012356,,,N706,TAGGCATG,S508,CTAAGCCT,Resistance,,HIV-1,,PRRT-IN,1000,n
+13,1000012357,,,N712,GTAGAGGA,S517,GCGTAAGA,Resistance,,HIV-1,,PRRT-IN,1000,n
+14,1000012358,,,N701,TAAGGCGA,S502,CTCTCTAT,Resistance,,HIV-1,,PRRT-IN,1000,n
+15,1000012359,,,N702,CGTACTAG,S503,TATCCTCT,Resistance,,HIV-1,,PRRT-IN,1000,n
+16,1000012360,,,N703,AGGCAGAA,S504,AGAGTAGA,Resistance,,HIV-1,,PRRT-IN,1000,n
+17,plasmid_1,,,N704,GACCAGAC,S505,TGCTAGCC,Plasmids,,,,,,y
