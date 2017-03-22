@@ -94,15 +94,16 @@ write_miseq_sample(){
     index_2=${sample_line[7]}
     description=${sample_line[9]}
 
+    run_name=`basename "$rundir"`
     ### create folder S.. in $dest
-    dest=$bufferdir/${rundir}_S${sample_number}
+    dest=$bufferdir/${run_name}_S${sample_number}
     if [[ -d $dest ]];then
         echo "Directory $dest exists! It should not."
         exit 1
     fi
     mkdir "$dest"
 
-    fastq_file=$rundir/${sample_name}_S${sample_number}_L001_R1_001.fastq.gz
+    fastq_file=$run_name/${sample_name}_S${sample_number}_L001_R1_001.fastq.gz
     if [ -e "$fastq_file" ]; then
         mv "$fastq_file" "$dest/"
     fi
@@ -153,8 +154,9 @@ write_resistance_test(){
     target=${sample_line[12]}
     viral_load=${sample_line[13]}
 
+    run_name=`basename "$rundir"`
     ### create folder S.. in $dest
-    dest=$bufferdir/RESTEST_${rundir}_S${sample_number}
+    dest=$bufferdir/RESTEST_${run_name}_S${sample_number}
     if [[ -d $dest ]];then
         echo "Directory $dest exists! It should not."
         exit 1
@@ -260,16 +262,16 @@ process_runs(){
 
     ### remove temporary file
     rm sample_sheet.tmp
-
+    run_name=`basename "$rundir"`
     # if any sample was "diagnostics" then write diagnostic run
     if [ "$diag_sample" = true ]; then
         echo "WRITING DIAGNOSTICS"
-        write_miseq_run "${rundir}_DIA" Diagnostics
+        write_miseq_run "${run_name}_DIA" Diagnostics
     fi
     # if any sample was "research" then write research run
     if [ "$res_sample" = true ]; then
         echo "WRITING RESEARCH"
-        write_miseq_run "${rundir}_RES" Research
+        write_miseq_run "${run_name}_RES" Research
     fi
 
     # reset [Header] and [Reads] information
@@ -295,9 +297,8 @@ process_runs(){
 echo 'GO!'
 ### main loop over all dirs in $incomingdir starting with "1"
 #for rundir in $(find $incomingdir -type d -name "1*" -depth 1)
-for rundir in $(ls $incomingdir)
-#for rundir in "$incomingdir"/1*
-do
+#for rundir in $(ls $incomingdir)
+for rundir in "$incomingdir"/1*; do
     [[ -d "$rundir" ]] || continue
     echo -e "\033[1;31m================================================================================\033[0m"
     echo "Now syncing:" "$rundir"
