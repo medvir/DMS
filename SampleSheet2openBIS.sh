@@ -94,7 +94,7 @@ write_miseq_sample(){
     index_2=${sample_line[7]}
     description=${sample_line[9]}
 
-    run_name=`basename "$rundir"`
+    run_name=$(basename "$rundir")
     ### create folder S.. in $dest
     dest=$bufferdir/${run_name}_S${sample_number}
     if [[ -d $dest ]];then
@@ -154,7 +154,7 @@ write_resistance_test(){
     target=${sample_line[12]}
     viral_load=${sample_line[13]}
 
-    run_name=`basename "$rundir"`
+    run_name=$(basename "$rundir")
     ### create folder S.. in $dest
     dest=$bufferdir/RESTEST_${run_name}_S${sample_number}
     if [[ -d $dest ]];then
@@ -262,7 +262,7 @@ process_runs(){
 
     ### remove temporary file
     rm sample_sheet.tmp
-    run_name=`basename "$rundir"`
+    run_name=$(basename "$rundir")
     # if any sample was "diagnostics" then write diagnostic run
     if [ "$diag_sample" = true ]; then
         echo "WRITING DIAGNOSTICS"
