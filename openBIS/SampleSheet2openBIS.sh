@@ -1,7 +1,7 @@
 #!/bin/bash
 
 incomingdir=/cygdrive/D/Illumina/MiSeqOutput
-incomingdir=/Users/ozagordi/openBIS
+incomingdir=/Users/ozagordi/DMS/openBIS
 bufferdir=/cygdrive/D/BufferDir
 bufferdir=/tmp/parse_samples/
 
@@ -23,6 +23,7 @@ PhiX='undefined'
 RGT_Box_1='undefined'
 RGT_Box_2='undefined'
 openbis='n'
+timavo='n'
 
 # global variable to allow a function return it
 ismolis='undefined'
@@ -77,6 +78,7 @@ write_miseq_run(){
 write_miseq_sample(){
     # input is a line in section [Data] of the samples sheet
     # copy fastq file into $bufferdir/$rundir/S.../ and write dataset.properties
+    # if timavo == y, sync fastq file on timavo too
 
     declare -a sample_line=("${!1}")
 
@@ -93,8 +95,9 @@ write_miseq_sample(){
     I5_index_id=${sample_line[6]}
     index_2=${sample_line[7]}
     description=${sample_line[9]}
+    timavo=${sample_line[14]}
 
-    run_name=`basename "$rundir"`
+    run_name=$(basename "$rundir")
     ### create folder S.. in $dest
     dest=$bufferdir/${run_name}_S${sample_number}
     if [[ -d $dest ]];then
@@ -106,6 +109,13 @@ write_miseq_sample(){
     fastq_file=$run_name/${sample_name}_S${sample_number}_L001_R1_001.fastq.gz
     if [ -e "$fastq_file" ]; then
         mv "$fastq_file" "$dest/"
+    fi
+    if [[ $timavo == *"y"* ]]; then
+        echo "TIMAVO!"
+        # TODO: write commadn rsync --rsync-path="mkdir -p /tmp/imaginary/ && rsync" source dest
+    else
+    #if [[ $timavo == *"n"* ]]; then
+        echo "NO TIMAVO!"
     fi
 
     ### write properties file
@@ -154,7 +164,7 @@ write_resistance_test(){
     target=${sample_line[12]}
     viral_load=${sample_line[13]}
 
-    run_name=`basename "$rundir"`
+    run_name=$(basename "$rundir")
     ### create folder S.. in $dest
     dest=$bufferdir/RESTEST_${run_name}_S${sample_number}
     if [[ -d $dest ]];then
@@ -262,7 +272,7 @@ process_runs(){
 
     ### remove temporary file
     rm sample_sheet.tmp
-    run_name=`basename "$rundir"`
+    run_name=$(basename "$rundir")
     # if any sample was "diagnostics" then write diagnostic run
     if [ "$diag_sample" = true ]; then
         echo "WRITING DIAGNOSTICS"
