@@ -1,4 +1,4 @@
-# MiSeq SampleSheet template
+# MiSeq SampleSheet template (Resistance)
 > Excel template to create a compatible SampleSheet for Resistance testing
 
 This is an Excel template with underlying VBA code to verify and save a MiSeq SampleSheet for Resistance testing at the Institute of Medical Virology (IMV).
