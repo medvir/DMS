@@ -1,10 +1,10 @@
 #!/bin/bash
 
 incomingdir=/cygdrive/D/Illumina/MiSeqOutput
-incomingdir=/Users/ozagordi/DMS/openBIS
+#incomingdir=/Users/ozagordi/DMS/openBIS
 bufferdir=/cygdrive/D/BufferDir
-bufferdir=/tmp/parse_samples
-timavoDST=timavo:/data/MiSeq
+#bufferdir=/tmp/parse_samples
+timavoDST=/data/MiSeq
 
 # define these globally so no need to pass it as a function parameter
 headers='undefined'
@@ -107,24 +107,29 @@ write_miseq_sample(){
     fi
     mkdir "$dest"
 
-    fastq_file=$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_R1_001.fastq.gz
+    fastq_file=$incomingdir/$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_R1_001.fastq.gz
     if [ -e "$fastq_file" ]; then
-        mv "$fastq_file" "$dest/"
+        # mv "$fastq_file" "$dest/"
+        echo "R1 file exists"
     else
-        touch "$fastq_file"
+        echo "R1 file does not exist"
     fi
 
     fastq_file_2=$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_R2_001.fastq.gz
     if [ -e "$fastq_file_2" ]; then
-        mv "$fastq_file_2" "$dest/"
+        echo "R2 file exists"
+        # mv "$fastq_file_2" "$dest/"
     fi
 
     if [[ $timavo == *"y"* ]]; then
+        echo "TIMAVO"
         DST2="${timavoDST}/MiSeqOutput/${run_name}/Data/Intensities/BaseCalls/"
-        rsync -v --rsync-path=\"mkdir -p "$DST2" \&\& rsync\" "$fastq_file" "$DST2"
+        rsync -av --rsync-path=\"mkdir -p "$DST2" \&\& rsync\" "$fastq_file" "timavo:$DST2"
         if [ -e "$fastq_file_2" ]; then
             rsync "$fastq_file_2" "$DST2"
         fi
+      else
+        echo "NO TIMAVO"
     fi
 
     ### write properties file
@@ -180,7 +185,7 @@ write_resistance_test(){
         echo "Directory $dest exists! It should not."
         exit 1
     fi
-    mkdir "$dest"
+    mkdir -p "$dest"
 
     ### write properties file
     prop_file=${dest}/dataset.properties
@@ -280,7 +285,10 @@ process_runs(){
     done < sample_sheet.tmp
 
     run_name=$(basename "$rundir")
-    rsync -a sample_sheet.tmp "${timavoDST}/MiSeqOutput/${run_name}/Data/Intensities/BaseCalls/SampleSheet.csv"
+    echo "Syncing SampleSheet"
+    smpshdst="${timavoDST}/MiSeqOutput/${run_name}/Data/Intensities/BaseCalls/"
+    rsync -av --rsync-path="mkdir -p $smpshdst && rsync" sample_sheet.tmp "timavo:$smpshdst/SampleSheet.csv"
+    echo "Synced"
     rm sample_sheet.tmp
 
     # if any sample was "diagnostics" then write diagnostic run
@@ -295,8 +303,8 @@ process_runs(){
     fi
 
     # get sample sheet name from runParameter.xml file and save runParameter.xml file with the sample sheet name
-    SAMPLESHEET=$(grep -A 1 ReagentKitRFIDTag "${incomingdir}/$rundir/runParameters.xml" | grep SerialNumber | sed 's/^.*<SerialNumber>//' | sed 's/<\/SerialNumber>//')
-    rsync -av --stats --chmod=ug+rwx -p "${incomingdir}/$rundir/runParameters.xml" "$timavoDST/MiSeqRunParameters/${SAMPLESHEET}.xml"
+    SAMPLESHEET=$(grep -A 1 ReagentKitRFIDTag "$rundir/runParameters.xml" | grep SerialNumber | sed 's/^.*<SerialNumber>//' | sed 's/<\/SerialNumber>//')
+    rsync -av --stats --chmod=ug+rwx -p "$rundir/runParameters.xml" "timavo:$timavoDST/MiSeqRunParameters/${SAMPLESHEET}.xml"
 
     # reset [Header] and [Reads] information
     Investigator_Name='undefined'
@@ -322,7 +330,7 @@ echo 'GO!'
 ### main loop over all dirs in $incomingdir starting with "1"
 #for rundir in $(find $incomingdir -type d -name "1*" -depth 1)
 #for rundir in $(ls $incomingdir)
-for rundir in "$incomingdir"/1*; do
+for rundir in "$incomingdir"/1703*; do
     [[ -d "$rundir" ]] || continue
     echo -e "\033[1;31m================================================================================\033[0m"
     echo "Now syncing:" "$rundir"
@@ -330,4 +338,4 @@ for rundir in "$incomingdir"/1*; do
 done
 
 # copy SampleSheets
-rsync -av --stats --chmod=ug+rwx -p /cygdrive/d/Illumina/MiSeqSampleSheets "$timavoDST"
+rsync -av --stats --chmod=ug+rwx -p /cygdrive/d/Illumina/MiSeqSampleSheets "timavo:$timavoDST"
