@@ -88,7 +88,7 @@ write_miseq_sample(){
     ### move fastq file into folder
 
     sample_number=${sample_line[0]}
-    sample_name=${sample_line[1]}
+    sample_name=$(echo ${sample_line[1]} | tr '_' '-')
     sample_plate=${sample_line[2]}
     sample_well=${sample_line[3]}
     I7_index_id=${sample_line[4]}
@@ -106,7 +106,6 @@ write_miseq_sample(){
         exit 1
     fi
     mkdir "$dest"
-
     fastq_file=$incomingdir/$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_R1_001.fastq.gz
     if [ -e "$fastq_file" ]; then
         # mv "$fastq_file" "$dest/"
@@ -124,7 +123,7 @@ write_miseq_sample(){
     if [[ $timavo == *"y"* ]]; then
         echo "TIMAVO"
         DST2="${timavoDST}/MiSeqOutput/${run_name}/Data/Intensities/BaseCalls/"
-        rsync -av --rsync-path=\"mkdir -p "$DST2" \&\& rsync\" "$fastq_file" "timavo:$DST2"
+        rsync -av --rsync-path="mkdir -p $DST2 && rsync" "$fastq_file" "timavo:$DST2"
         if [ -e "$fastq_file_2" ]; then
             rsync "$fastq_file_2" "$DST2"
         fi
