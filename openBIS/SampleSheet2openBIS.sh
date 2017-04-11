@@ -329,7 +329,7 @@ echo 'GO!'
 ### main loop over all dirs in $incomingdir starting with "1"
 #for rundir in $(find $incomingdir -type d -name "1*" -depth 1)
 #for rundir in $(ls $incomingdir)
-for rundir in "$incomingdir"/1703*; do
+for rundir in "$incomingdir"/1*; do
     [[ -d "$rundir" ]] || continue
     echo -e "\033[1;31m================================================================================\033[0m"
     echo "Now syncing:" "$rundir"
