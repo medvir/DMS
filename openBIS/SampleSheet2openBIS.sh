@@ -86,7 +86,7 @@ write_miseq_sample(){
     ### move fastq file into folder
 
     sample_number=${sample_line[0]}
-    # this should mimick the behaviour of MiSeq Reporter on sample names with
+    # this should mimic the behaviour of MiSeq Reporter on sample names with
     # spaces and punctuations:
     # - remove leadin and trailing whitespaces (first sed)
     # - replace punctuation characters and internal spaces with dashes
