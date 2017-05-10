@@ -83,12 +83,14 @@ write_miseq_sample(){
 
     declare -a sample_line=("${!1}")
 
-    #echo "    " "${sample_line[@]}"
-
     ### move fastq file into folder
 
     sample_number=${sample_line[0]}
-    sample_name=$(echo ${sample_line[1]} | tr '_' '-')
+    # this should mimick the behaviour of MiSeq Reporter on sample names with
+    # spaces and punctuations:
+    # - remove leadin and trailing whitespaces (first sed)
+    # - replace punctuation characters and internal spaces with dashes
+    sample_name=$(echo ${sample_line[1]} | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | tr -s '[:punct:] ' '-')
     sample_plate=${sample_line[2]}
     sample_well=${sample_line[3]}
     I7_index_id=${sample_line[4]}
@@ -216,7 +218,8 @@ process_runs(){
     headers='undefined'
 
     ### remove spaces in sample sheet
-    sed -e "s/ /_/g" < "$rundir/Data/Intensities/BaseCalls/SampleSheet.csv" > sample_sheet.tmp
+    #sed -e "s/ /_/g" < "$rundir/Data/Intensities/BaseCalls/SampleSheet.csv" > sample_sheet.tmp
+    cp "$rundir/Data/Intensities/BaseCalls/SampleSheet.csv" sample_sheet.tmp
 
     ### counters for read 1/2 and samples
     r=0
@@ -224,7 +227,9 @@ process_runs(){
     diag_sample=false
     res_sample=false
 
-    ### read sample sheet line by line
+    ### read sample sheet line by line splitting on commas
+    ### || [[ -n "$line"]] allow reading last line also if file does not end
+    ### with a newline
     while IFS=',' read -r -a line || [[ -n "$line" ]]
     do
 

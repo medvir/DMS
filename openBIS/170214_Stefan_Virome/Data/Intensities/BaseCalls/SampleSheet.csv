@@ -32,4 +32,4 @@ Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,ind
 8,1000234592_BE_4_2,,,N710,CGAGGCTG,S504,AGAGTAGA ,Metagenomics,,,,,,y
 9,Viral_multiplex_reagent_5_1,,,N711,AAGAGGCA ,S506,ACTGCATA ,Metagenomics,,,,,,y
 10,Viral_multiplex_reagent_5_2,,,N712,GTAGAGGA ,S506,ACTGCATA ,Metagenomics,,,,,,y
-11,random_neg_1_100,,,N712,GTAGAGGA ,S508,CTAAGCCT,Metagenomics,,,,,,y
+11,random- _neg.1_100 ,,,N712,GTAGAGGA ,S508,CTAAGCCT,Metagenomics,,,,,,y
