@@ -223,6 +223,7 @@ process_runs(){
     s=0
     diag_sample=false
     res_sample=false
+
     ### read sample sheet line by line
     while IFS=',' read -r -a line || [[ -n "$line" ]]
     do
