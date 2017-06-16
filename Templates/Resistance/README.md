@@ -68,3 +68,4 @@ The code is saved under Modules in SampleSheetTemplateResistance. It contains tw
 
 ## Todo
 * include validation for viral load (?)
+* include test for uniqueness of indexprimer combinations
