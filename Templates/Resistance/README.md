@@ -57,6 +57,7 @@ This step should be repeated until there's no error left.
 
 ### SampleSheet speichern
 Once all informations are within the SampleSheet and it's valid, it can be saved in .csv format. It's important that the cells are separated by commas.  
+For that macro to work the computer needs to be connected to the server and the path mentioned below must be valid (e.g. if a folder name or structure is changed it'll need to be changed in the VBA code too).  
 The Macro behind the SampleSheet speichern button works only for Excel on Windows. If you press it, the SampleSheet Worksheet is saved as .csv file with the MS Nr. as filename in the MiSeq folder on the server ("R:\Common\Equipment\MiSeq\MiSeqSampleSheets\" + msnumber + ".csv").  
 If you try this on Excel for Mac you'll receive a message that you have to save the SampleSheet manually. In that case you've to select the MiSeq SampleSheet worksheet and save it as .csv file.
 
@@ -67,3 +68,4 @@ The code is saved under Modules in SampleSheetTemplateResistance. It contains tw
 
 ## Todo
 * include validation for viral load (?)
+* include test for uniqueness of indexprimer combinations
