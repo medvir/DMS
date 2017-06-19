@@ -110,7 +110,7 @@ write_miseq_sample(){
     mkdir "$dest"
     fastq_file=$incomingdir/$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_R1_001.fastq.gz
     if [ -e "$fastq_file" ]; then
-        # mv "$fastq_file" "$dest/"
+        rsync "$fastq_file" "$dest/"
         echo "R1 file exists"
     else
         echo "R1 file does not exist"
@@ -119,7 +119,7 @@ write_miseq_sample(){
     fastq_file_2=$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_R2_001.fastq.gz
     if [ -e "$fastq_file_2" ]; then
         echo "R2 file exists"
-        # mv "$fastq_file_2" "$dest/"
+        rsync "$fastq_file_2" "$dest/"
     fi
 
     if [[ $timavo == *"y"* ]]; then
@@ -306,6 +306,9 @@ process_runs(){
         echo "WRITING RESEARCH"
         write_miseq_run "${run_name}_RES" Research
     fi
+
+    # sync BufferDir to datamover
+    rsync -av "$bufferdir" ozagor@130.60.24.51:data/outgoing/
 
     # get sample sheet name from runParameter.xml file and save runParameter.xml file with the sample sheet name
     SAMPLESHEET=$(grep -A 1 ReagentKitRFIDTag "$rundir/runParameters.xml" | grep SerialNumber | sed 's/^.*<SerialNumber>//' | sed 's/<\/SerialNumber>//')
