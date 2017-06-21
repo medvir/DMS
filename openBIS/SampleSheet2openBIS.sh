@@ -4,7 +4,10 @@ incomingdir=/cygdrive/D/Illumina/MiSeqOutput
 #incomingdir=/Users/ozagordi/DMS/openBIS
 bufferdir=/cygdrive/D/BufferDir
 #bufferdir=/tmp/parse_samples
+#    rsync -av "$bufferdir" ozagor@130.60.24.51:data/outgoing/
+
 timavoDST=/data/MiSeq
+datamoverDST=data/outgoing
 
 # define these globally so no need to pass it as a function parameter
 headers='undefined'
@@ -42,38 +45,57 @@ test_molis(){
 write_miseq_run(){
     # input: run_name space
     # space is Diagnostics or Research
-    runname=$1
-    dest=$bufferdir/$runname
-    if [[ -d $dest ]];then
-        echo "Directory $dest exists! It should not."
-        exit 1
-    fi
-    mkdir "$dest"
-    prop_file=${dest}/dataset.properties
+    run_name=$1
 
-    datenum=${runname:0:6}
+    datenum=${run_name:0:6}
     YYYY=20${datenum:0:2}
     MM=${datenum:2:2}
     DD=${datenum:4:2}
 
-    ### sample_type MISEQ_RUN
-
+    prop_file=sample.properties
     {
-    printf "space=%s\n" "$2"
-    printf "IEMFileVersion=%s\n" "$IEMFileVersion"
-    printf "investigator_name=%s\n" "$Investigator_Name"
-    printf "experiment_name=%s\n" "$Experiment_Name"
-    printf "date=%s-%s-%s\n" "${YYYY}" "${MM}" "${DD}"
-    printf "miseq_workflow=%s\n" "$Workflow"
-    printf "Application=%s\n" "$Application"
-    printf "Assay=%s\n" "$Assay"
-    printf "Chemistry=%s\n" "$Chemistry"
-    printf "Read1=%s\n" "$Read1"
-    printf "Read2=%s\n" "$Read2"
-    printf "PhiX=%s\n" "$PhiX"
-    printf "RGT_Box_1=%s\n" "$RGT_Box_1"
-    printf "RGT_Box_2=%s\n" "$RGT_Box_2"
+        printf "INVESTIGATOR_NAME = %s\n" "$Investigator_Name"
+        printf "EXPERIMENT_NAME = %s\n" "$Experiment_Name"
+        printf "ACCOUNT = %s\n" "$Account"
+        printf "DATE = %s-%s-%s\n" "${YYYY}" "${MM}" "${DD}"
+        printf "MISEQ_WORKFLOW = %s\n" "$Workflow"
+        printf "APPLICATION = %s\n" "$Application"
+        printf "ASSAY = %s\n" "$Assay"
+        printf "CHEMISTRY = %s\n" "$Chemistry"
+        printf "READ1 = %s\n" "$Read1"
+        printf "READ2 = %s\n" "$Read2"
+        printf "PHIX = %s\n" "$PhiX"
+        printf "RGT_Box_1 = %s\n" "$RGT_box1"
+        printf "RGT_Box_2 = %s\n" "$RGT_box2"
     } > "$prop_file"
+
+    dst="${datamoverDST}/${run_name}"
+    rsync -av --rsync-path="mkdir -p $dst && rsync" "$prop_file" "ozagor@datamover:$dst"
+    # save rsync exit status, if 0 then success
+    rsync1=$?
+
+    ### sample_type MISEQ_RUN
+    if [[ $2 == "Resistance"]]; then
+        project_to_write="RESISTANCE_TESTING"
+    else
+        project_to_write=$2
+    fi
+    prop_file=dataset.properties
+    {
+        printf "SPACE = IMV\n"
+        printf "PROJECT = %s\n" "$project_to_write"
+        printf "EXPERIMENT = MISEQ_RUNS\n"
+        printf "SAMPLE = %s\n" "$run_name"
+        printf "SAMPLE_TYPE = MISEQ_RUN\n"
+        printf "DATASET_TYPE = DATAMOVER_SAMPLE_CREATOR\n"
+    } > "$prop_file"
+
+    rsync -av "$prop_file" "ozagor@datamover:$dst"
+    rsync2=$?
+    if [ "$rsync1" -eq "0" && "$rsync2" -eq "0" ]; then
+        ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}"
+    fi
+
 }
 
 write_miseq_sample(){
@@ -100,14 +122,9 @@ write_miseq_sample(){
     description=${sample_line[9]}
     timavo=${sample_line[14]}
 
-    run_name=$(basename "$rundir")
-    ### create folder S.. in $dest
-    dest=$bufferdir/${run_name}_S${sample_number}
-    if [[ -d $dest ]];then
-        echo "Directory $dest exists! It should not."
-        exit 1
-    fi
-    mkdir "$dest"
+    run_name="$(basename $rundir)"
+
+
     fastq_file=$incomingdir/$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_R1_001.fastq.gz
     if [ -e "$fastq_file" ]; then
         rsync "$fastq_file" "$dest/"
@@ -134,36 +151,48 @@ write_miseq_sample(){
     fi
 
     ### write properties file
-    prop_file=${dest}/dataset.properties
-
-    ### space and project
-
-    # space is Diagnostics if sample_name is a MOLIS number
-    test_molis "$sample_name"
-    if [[ "$ismolis" = true ]];then
-        Space='Diagnostics'
-    else
-        Space='Research'
-    fi
-    ismolis='undefined'
 
     # Project from Sample_Project column
     Project=${sample_line[8]}
 
     ### sample_type MISEQ_SAMPLE
+
+    prop_file=sample.properties
     {
-    printf "Space=%s\n" "$Space"
-    printf "Project=%s\n" "$Project"
-    printf "Sample_ID=%s\n" "${sample_number}"
-    printf "Sample_Name=%s\n" "${sample_name}"
-    printf "Sample_Plate=%s\n" "${sample_plate}"
-    printf "Sample_Well=%s\n" "$sample_well"
-    printf "I7_Index_ID=%s\n" "$I7_index_id"
-    printf "INDEX_1=%s\n" "$index_1"
-    printf "I5_Index_ID=%s\n" "$I5_index_id"
-    printf "INDEX_2=%s\n" "$index_2"
-    printf "DESCRIPTION=%s\n" "$description"
+        printf "SAMPLE_ID=%s\n" "${sample_number}"
+        printf "SAMPLE_NAME=%s\n" "${sample_name}"
+        printf "SAMPLE_PLATE=%s\n" "${sample_plate}"
+        printf "SAMPLE_WELL=%s\n" "$sample_well"
+        printf "I7_INDEX_ID=%s\n" "$I7_index_id"
+        printf "INDEX_1=%s\n" "$index_1"
+        printf "I5_INDEX_ID=%s\n" "$I5_index_id"
+        printf "INDEX_2=%s\n" "$index_2"
+        printf "DESCRIPTION=%s\n" "$description"
     } > "$prop_file"
+
+    dst="${datamoverDST}/${run_name}-${sample_number}"
+    rsync -av --rsync-path="mkdir -p $dst && rsync" "$prop_file" "ozagor@datamover:$dst"
+    # save rsync exit status, if 0 then success
+    rsync1=$?
+
+    prop_file=dataset.properties
+    {
+        printf "SPACE = IMV\n"
+        printf "PROJECT = %s\n" "$Project"
+        printf "EXPERIMENT = MISEQ_SAMPLES\n"
+        printf "SAMPLE = %s-%s\n" "${run_name}" "${sample_number}"
+        printf "SAMPLE_TYPE = MISEQ_SAMPLE\n"
+        printf "DATASET_TYPE = FASTQ\n"
+    } > "$prop_file"
+
+    rsync -av "$prop_file" "ozagor@datamover:$dst"
+    rsync2=$?
+
+
+    if [ "$rsync1" -eq "0" && "$rsync2" -eq "0" && "$rsync3" -eq "0" && "$rsync4" -eq "0" ]; then
+        ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}-${sample_number}"
+    fi
+
 }
 
 write_resistance_test(){
@@ -219,19 +248,28 @@ process_runs(){
 
     ### remove spaces in sample sheet
     #sed -e "s/ /_/g" < "$rundir/Data/Intensities/BaseCalls/SampleSheet.csv" > sample_sheet.tmp
+    # sample sheets are now created with Stefan's template: no need to remove them anymore
     cp "$rundir/Data/Intensities/BaseCalls/SampleSheet.csv" sample_sheet.tmp
-
+    count_openbis=$(grep -c openbis sample_sheet.tmp)
     ### counters for read 1/2 and samples
     r=0
     s=0
-    diag_sample=false
     res_sample=false
+    meta_sample=false
+    plasm_sample=false
+    anti_sample=false
+    other_sample=false
 
     ### read sample sheet line by line splitting on commas
     ### || [[ -n "$line"]] allow reading last line also if file does not end
     ### with a newline
     while IFS=',' read -r -a line || [[ -n "$line" ]]
     do
+
+        if [[ "$count_openbis" == 0 ]]
+        then
+            break
+        fi
 
         if [[ ${line[0]} =~ ^\[[[:alpha:]]*\] ]]
         then
@@ -271,44 +309,53 @@ process_runs(){
         ### [Data] section values
         elif [[ $section == "[Data]" && ${line[1]} && $s -gt 0 ]]
         then
-            # echo "Before: " "$ismolis"
-            echo "    " "${line[@]}"
-            test_molis "${line[1]}"
-            if [ "$ismolis" = true ]; then
-                diag_sample=true
-            else
+
+            if [[ ${line[8]} == "Antibodies"]]; then
+                anti_sample=true
+            elif [[ ${line[8]} == "Metagenomics" ]]; then
+                meta_sample=true
+            elif [[ ${line[8]} == "Other" ]]; then
+                other_sample=true
+            elif [[ ${line[8]} == "Plasmids"]]; then
+                plasm_sample=true
+            elif [[ ${line[8]} == "Resistance" ]]; then
                 res_sample=true
-            fi
-            #echo "After: " "$ismolis"
-            ismolis='undefined'
-            write_miseq_sample line[@]
-            if [[ "${line[8]}" == "Resistance" ]]; then
                 write_resistance_test line[@]
-            fi
+
+            write_miseq_sample line[@]
+
             ((s+=1))
         fi
     done < sample_sheet.tmp
 
+    echo "Syncing SampleSheet to timavo"
     run_name=$(basename "$rundir")
-    echo "Syncing SampleSheet"
     smpshdst="${timavoDST}/MiSeqOutput/${run_name}/Data/Intensities/BaseCalls/"
     rsync -av --rsync-path="mkdir -p $smpshdst && rsync" sample_sheet.tmp "timavo:$smpshdst/SampleSheet.csv"
-    echo "Synced"
+    echo "Synced to timavo"
     rm sample_sheet.tmp
 
-    # if any sample was "diagnostics" then write diagnostic run
-    if [ "$diag_sample" = true ]; then
-        echo "WRITING DIAGNOSTICS"
-        write_miseq_run "${run_name}_DIA" Diagnostics
+    # if any sample was X then write Miseq run sample with PROJECT = X
+    if [ "$anti_sample" = true ]; then
+        echo "WRITING ANTIBODIES RUN"
+        write_miseq_run "${run_name}_ANTIBODIES" Antibodies
     fi
-    # if any sample was "research" then write research run
+    if [ "$meta_sample" = true ]; then
+        echo "WRITING METAGENOMICS RUN"
+        write_miseq_run "${run_name}_METAGENOMICS" Metagenomics
+    fi
+    if [ "$other_sample" = true ]; then
+        echo "WRITING OTHER RUN"
+        write_miseq_run "${run_name}_OTHER" Other
+    fi
+    if [ "$plasm_sample" = true ]; then
+        echo "WRITING PLASMIDS RUN"
+        write_miseq_run "${run_name}_PLASMIDS" Plasmids
+    fi
     if [ "$res_sample" = true ]; then
-        echo "WRITING RESEARCH"
-        write_miseq_run "${run_name}_RES" Research
+        echo "WRITING RESISTANCE RUN"
+        write_miseq_run "${run_name}_RESISTANCE" Resistance
     fi
-
-    # sync BufferDir to datamover
-    rsync -av "$bufferdir" ozagor@130.60.24.51:data/outgoing/
 
     # get sample sheet name from runParameter.xml file and save runParameter.xml file with the sample sheet name
     SAMPLESHEET=$(grep -A 1 ReagentKitRFIDTag "$rundir/runParameters.xml" | grep SerialNumber | sed 's/^.*<SerialNumber>//' | sed 's/<\/SerialNumber>//')
