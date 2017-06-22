@@ -18,8 +18,8 @@ Application='undefined'
 Assay='undefined'
 #Description='undefined'
 Chemistry='undefined'
-Read1='undefined'
-Read2='undefined'
+Read1=''
+Read2=''
 PhiX='undefined'
 RGT_Box_1='undefined'
 RGT_Box_2='undefined'
@@ -59,9 +59,9 @@ write_miseq_run(){
         printf "APPLICATION = %s\n" "$Application"
         printf "ASSAY = %s\n" "$Assay"
         printf "CHEMISTRY = %s\n" "$Chemistry"
-        printf "READ1 = %s\n" "$Read1"
-        printf "READ2 = %s\n" "$Read2"
-        printf "PHIX = %s\n" "$PhiX"
+        printf "READ_1 = %s\n" "$Read1"
+        printf "READ_2 = %s\n" "$Read2"
+        printf "PHIX_CONCENTRATION = %s\n" "$PhiX"
         printf "RGT_Box_1 = %s\n" "$RGT_box1"
         printf "RGT_Box_2 = %s\n" "$RGT_box2"
     } > "$prop_file"
@@ -144,15 +144,15 @@ write_miseq_sample(){
 
     prop_file=sample.properties
     {
-        printf "SAMPLE_ID=%s\n" "${sample_number}"
-        printf "SAMPLE_NAME=%s\n" "${sample_name}"
-        printf "SAMPLE_PLATE=%s\n" "${sample_plate}"
-        printf "SAMPLE_WELL=%s\n" "$sample_well"
-        printf "I7_INDEX_ID=%s\n" "$I7_index_id"
-        printf "INDEX_1=%s\n" "$index_1"
-        printf "I5_INDEX_ID=%s\n" "$I5_index_id"
-        printf "INDEX_2=%s\n" "$index_2"
-        printf "DESCRIPTION=%s\n" "$description"
+        printf "SAMPLE_ID = %s\n" "${sample_number}"
+        printf "SAMPLE_NAME = %s\n" "${sample_name}"
+        printf "SAMPLE_PLATE = %s\n" "${sample_plate}"
+        printf "SAMPLE_WELL = %s\n" "$sample_well"
+        printf "I7_INDEX_ID = %s\n" "$I7_index_id"
+        printf "INDEX_1 = %s\n" "$index_1"
+        printf "I5_INDEX_ID = %s\n" "$I5_index_id"
+        printf "INDEX_2 = %s\n" "$index_2"
+        printf "DESCRIPTION = %s\n" "$description"
     } > "$prop_file"
 
     dst="${datamoverDST}/${run_name}-${sample_number}"
@@ -213,11 +213,11 @@ write_resistance_test(){
     ### write properties file
     prop_file=sample.properties
     {
-        printf "SAMPLE_NAME=%s\n" "$sample_name"
-        printf "VIRUS=%s\n" "$virus"
-        printf "TARGET_TYPE=%s\n" "$target"
-        printf "GENOTYPE=%s\n" "$genotype"
-        printf "VIRAL_LOAD=%s\n" "$viral_load"
+        printf "SAMPLE_NAME = %s\n" "$sample_name"
+        printf "VIRUS = %s\n" "$virus"
+        printf "TARGET_TYPE = %s\n" "$target"
+        printf "GENOTYPE = %s\n" "$genotype"
+        printf "VIRAL_LOAD = %s\n" "$viral_load"
     } > "$prop_file"
 
     dst="${datamoverDST}/${run_name}-${sample_number}_RESISTANCE"
@@ -383,8 +383,8 @@ process_runs(){
     Assay='undefined'
 #    Description='undefined'
     Chemistry='undefined'
-    Read1='undefined'
-    Read2='undefined'
+    Read1=''
+    Read2=''
     PhiX='undefined'
     RGT_Box_1='undefined'
     RGT_Box_2='undefined'
