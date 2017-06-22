@@ -175,7 +175,7 @@ write_miseq_sample(){
 
     rsync3=0
     if [ -e "$fastq_file" ]; then
-        rsync "$fastq_file" "$dest/"
+        rsync -av "$fastq_file" "ozagor@datamover:$dst"
         rsync3=$?
         echo "R1 file exists"
     else
@@ -185,7 +185,7 @@ write_miseq_sample(){
     rsync4=0
     if [ -e "$fastq_file_2" ]; then
         echo "R2 file exists"
-        rsync "$fastq_file_2" "$dest/"
+        rsync -av "$fastq_file_2" "ozagor@datamover:$dst"
         rsync4=$?
     fi
 
