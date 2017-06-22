@@ -2,9 +2,6 @@
 
 incomingdir=/cygdrive/D/Illumina/MiSeqOutput
 #incomingdir=/Users/ozagordi/DMS/openBIS
-bufferdir=/cygdrive/D/BufferDir
-#bufferdir=/tmp/parse_samples
-#    rsync -av "$bufferdir" ozagor@130.60.24.51:data/outgoing/
 
 timavoDST=/data/MiSeq
 datamoverDST=data/outgoing
