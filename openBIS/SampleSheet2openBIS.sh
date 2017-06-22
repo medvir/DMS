@@ -92,9 +92,9 @@ write_miseq_run(){
 
     rsync -av "$prop_file" "ozagor@datamover:$dst"
     rsync2=$?
-    if [ "$rsync1" -eq "0" && "$rsync2" -eq "0" ]; then
-        ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}"
-    fi
+    # if [ "$rsync1" -eq "0" && "$rsync2" -eq "0" ]; then
+    #     ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}"
+    # fi
 
 }
 
@@ -124,20 +124,8 @@ write_miseq_sample(){
 
     run_name="$(basename $rundir)"
 
-
     fastq_file=$incomingdir/$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_R1_001.fastq.gz
-    if [ -e "$fastq_file" ]; then
-        rsync "$fastq_file" "$dest/"
-        echo "R1 file exists"
-    else
-        echo "R1 file does not exist"
-    fi
-
     fastq_file_2=$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_R2_001.fastq.gz
-    if [ -e "$fastq_file_2" ]; then
-        echo "R2 file exists"
-        rsync "$fastq_file_2" "$dest/"
-    fi
 
     if [[ $timavo == *"y"* ]]; then
         echo "TIMAVO"
@@ -188,10 +176,25 @@ write_miseq_sample(){
     rsync -av "$prop_file" "ozagor@datamover:$dst"
     rsync2=$?
 
-
-    if [ "$rsync1" -eq "0" && "$rsync2" -eq "0" && "$rsync3" -eq "0" && "$rsync4" -eq "0" ]; then
-        ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}-${sample_number}"
+    rsync3=0
+    if [ -e "$fastq_file" ]; then
+        rsync "$fastq_file" "$dest/"
+        rsync3=$?
+        echo "R1 file exists"
+    else
+        echo "R1 file does not exist"
     fi
+
+    rsync4=0
+    if [ -e "$fastq_file_2" ]; then
+        echo "R2 file exists"
+        rsync "$fastq_file_2" "$dest/"
+        rsync4=$?
+    fi
+
+    # if [ "$rsync1" -eq "0" && "$rsync2" -eq "0" && "$rsync3" -eq "0" && "$rsync4" -eq "0" ]; then
+    #     ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}-${sample_number}"
+    # fi
 
 }
 
@@ -209,25 +212,38 @@ write_resistance_test(){
     viral_load=${sample_line[13]}
 
     run_name=$(basename "$rundir")
-    ### create folder S.. in $dest
-    dest=$bufferdir/RESTEST_${run_name}_S${sample_number}
-    if [[ -d $dest ]];then
-        echo "Directory $dest exists! It should not."
-        exit 1
-    fi
-    mkdir -p "$dest"
 
     ### write properties file
-    prop_file=${dest}/dataset.properties
-    touch "$prop_file"
-
+    prop_file=sample.properties
     {
-    printf "SAMPLE_NAME=%s\n" "$sample_name"
-    printf "VIRUS=%s\n" "$virus"
-    printf "TARGET_TYPE=%s\n" "$target"
-    printf "GENOTYPE=%s\n" "$genotype"
-    printf "VIRAL_LOAD=%s\n" "$viral_load"
+        printf "SAMPLE_NAME=%s\n" "$sample_name"
+        printf "VIRUS=%s\n" "$virus"
+        printf "TARGET_TYPE=%s\n" "$target"
+        printf "GENOTYPE=%s\n" "$genotype"
+        printf "VIRAL_LOAD=%s\n" "$viral_load"
     } > "$prop_file"
+
+    dst="${datamoverDST}/${run_name}-${sample_number}_RESISTANCE"
+    rsync -av --rsync-path="mkdir -p $dst && rsync" "$prop_file" "ozagor@datamover:$dst"
+    # save rsync exit status, if 0 then success
+    rsync1=$?
+
+    prop_file=dataset.properties
+    {
+        printf "SPACE = IMV\n"
+        printf "PROJECT = RESISTANCE_TESTING\n"
+        printf "EXPERIMENT = RESISTANCE_TESTS\n"
+        printf "SAMPLE = %s-%s_RESISTANCE\n" "${run_name}" "${sample_number}"
+        printf "SAMPLE_TYPE = RESISTANCE_TEST\n"
+        printf "DATASET_TYPE = DATAMOVER_SAMPLE_CREATOR\n"
+    } > "$prop_file"
+
+    rsync -av "$prop_file" "ozagor@datamover:$dst"
+    rsync2=$?
+
+    # if [ "$rsync1" -eq "0" && "$rsync2" -eq "0" ]; then
+    #     ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}-${sample_number}_RESISTANCE"
+    # fi
 
 }
 
@@ -266,10 +282,10 @@ process_runs(){
     while IFS=',' read -r -a line || [[ -n "$line" ]]
     do
 
-        if [[ "$count_openbis" == 0 ]]
-        then
-            break
-        fi
+        # if [[ "$count_openbis" == 0 ]]
+        # then
+        #     break
+        # fi
 
         if [[ ${line[0]} =~ ^\[[[:alpha:]]*\] ]]
         then
