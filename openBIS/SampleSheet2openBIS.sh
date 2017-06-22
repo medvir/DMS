@@ -1,8 +1,6 @@
 #!/bin/bash
 
 incomingdir=/cygdrive/D/Illumina/MiSeqOutput
-#incomingdir=/Users/ozagordi/DMS/openBIS
-
 timavoDST=/data/MiSeq
 datamoverDST=data/outgoing
 
@@ -72,7 +70,7 @@ write_miseq_run(){
     rsync1=$?
 
     ### sample_type MISEQ_RUN
-    if [[ $2 == "Resistance"]]; then
+    if [[ $2 == "Resistance" ]]; then
         project_to_write="RESISTANCE_TESTING"
     else
         project_to_write=$2
@@ -144,15 +142,15 @@ write_miseq_sample(){
 
     prop_file=sample.properties
     {
-        printf "SAMPLE_ID = %s\n" "${sample_number}"
-        printf "SAMPLE_NAME = %s\n" "${sample_name}"
-        printf "SAMPLE_PLATE = %s\n" "${sample_plate}"
-        printf "SAMPLE_WELL = %s\n" "$sample_well"
-        printf "I7_INDEX_ID = %s\n" "$I7_index_id"
-        printf "INDEX_1 = %s\n" "$index_1"
-        printf "I5_INDEX_ID = %s\n" "$I5_index_id"
-        printf "INDEX_2 = %s\n" "$index_2"
-        printf "DESCRIPTION = %s\n" "$description"
+        printf "SAMPLE_ID=%s\n" "${sample_number}"
+        printf "SAMPLE_NAME=%s\n" "${sample_name}"
+        printf "SAMPLE_PLATE=%s\n" "${sample_plate}"
+        printf "SAMPLE_WELL=%s\n" "$sample_well"
+        printf "I7_INDEX_ID=%s\n" "$I7_index_id"
+        printf "INDEX_1=%s\n" "$index_1"
+        printf "I5_INDEX_ID=%s\n" "$I5_index_id"
+        printf "INDEX_2=%s\n" "$index_2"
+        printf "DESCRIPTION=%s\n" "$description"
     } > "$prop_file"
 
     dst="${datamoverDST}/${run_name}-${sample_number}"
@@ -213,11 +211,11 @@ write_resistance_test(){
     ### write properties file
     prop_file=sample.properties
     {
-        printf "SAMPLE_NAME = %s\n" "$sample_name"
-        printf "VIRUS = %s\n" "$virus"
-        printf "TARGET_TYPE = %s\n" "$target"
-        printf "GENOTYPE = %s\n" "$genotype"
-        printf "VIRAL_LOAD = %s\n" "$viral_load"
+        printf "SAMPLE_NAME=%s\n" "$sample_name"
+        printf "VIRUS=%s\n" "$virus"
+        printf "TARGET_TYPE=%s\n" "$target"
+        printf "GENOTYPE=%s\n" "$genotype"
+        printf "VIRAL_LOAD=%s\n" "$viral_load"
     } > "$prop_file"
 
     dst="${datamoverDST}/${run_name}-${sample_number}_RESISTANCE"
@@ -323,18 +321,18 @@ process_runs(){
         elif [[ $section == "[Data]" && ${line[1]} && $s -gt 0 ]]
         then
 
-            if [[ ${line[8]} == "Antibodies"]]; then
+            if [[ ${line[8]} == "Antibodies" ]]; then
                 anti_sample=true
             elif [[ ${line[8]} == "Metagenomics" ]]; then
                 meta_sample=true
             elif [[ ${line[8]} == "Other" ]]; then
                 other_sample=true
-            elif [[ ${line[8]} == "Plasmids"]]; then
+            elif [[ ${line[8]} == "Plasmids" ]]; then
                 plasm_sample=true
             elif [[ ${line[8]} == "Resistance" ]]; then
                 res_sample=true
                 write_resistance_test line[@]
-
+            fi
             write_miseq_sample line[@]
 
             ((s+=1))
