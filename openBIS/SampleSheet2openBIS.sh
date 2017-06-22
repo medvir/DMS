@@ -87,9 +87,9 @@ write_miseq_run(){
 
     rsync -av "$prop_file" "ozagor@datamover:$dst"
     rsync2=$?
-    # if [ "$rsync1" -eq "0" && "$rsync2" -eq "0" ]; then
-    #     ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}"
-    # fi
+    if [ "$rsync1" -eq "0" && "$rsync2" -eq "0" ]; then
+        ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}"
+    fi
 
 }
 
@@ -187,9 +187,9 @@ write_miseq_sample(){
         rsync4=$?
     fi
 
-    # if [ "$rsync1" -eq "0" && "$rsync2" -eq "0" && "$rsync3" -eq "0" && "$rsync4" -eq "0" ]; then
-    #     ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}-${sample_number}"
-    # fi
+    if [ "$rsync1" -eq "0" && "$rsync2" -eq "0" && "$rsync3" -eq "0" && "$rsync4" -eq "0" ]; then
+        ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}-${sample_number}"
+    fi
 
 }
 
@@ -236,9 +236,9 @@ write_resistance_test(){
     rsync -av "$prop_file" "ozagor@datamover:$dst"
     rsync2=$?
 
-    # if [ "$rsync1" -eq "0" && "$rsync2" -eq "0" ]; then
-    #     ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}-${sample_number}_RESISTANCE"
-    # fi
+    if [ "$rsync1" -eq "0" && "$rsync2" -eq "0" ]; then
+        ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}-${sample_number}_RESISTANCE"
+    fi
 
 }
 
