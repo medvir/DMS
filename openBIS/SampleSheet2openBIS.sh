@@ -1,8 +1,6 @@
 #!/bin/bash
 
 incomingdir=/cygdrive/D/Illumina/MiSeqOutput
-#incomingdir=/Users/ozagordi/DMS/openBIS
-
 timavoDST=/data/MiSeq
 datamoverDST=data/outgoing
 
@@ -72,7 +70,7 @@ write_miseq_run(){
     rsync1=$?
 
     ### sample_type MISEQ_RUN
-    if [[ $2 == "Resistance"]]; then
+    if [[ $2 == "Resistance" ]]; then
         project_to_write="RESISTANCE_TESTING"
     else
         project_to_write=$2
@@ -323,18 +321,18 @@ process_runs(){
         elif [[ $section == "[Data]" && ${line[1]} && $s -gt 0 ]]
         then
 
-            if [[ ${line[8]} == "Antibodies"]]; then
+            if [[ ${line[8]} == "Antibodies" ]]; then
                 anti_sample=true
             elif [[ ${line[8]} == "Metagenomics" ]]; then
                 meta_sample=true
             elif [[ ${line[8]} == "Other" ]]; then
                 other_sample=true
-            elif [[ ${line[8]} == "Plasmids"]]; then
+            elif [[ ${line[8]} == "Plasmids" ]]; then
                 plasm_sample=true
             elif [[ ${line[8]} == "Resistance" ]]; then
                 res_sample=true
                 write_resistance_test line[@]
-
+            fi
             write_miseq_sample line[@]
 
             ((s+=1))
