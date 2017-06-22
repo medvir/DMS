@@ -65,7 +65,7 @@ write_miseq_run(){
     } > "$prop_file"
 
     dst="${datamoverDST}/${run_name}"
-    rsync -av --rsync-path="mkdir -p $dst && rsync" "$prop_file" "ozagor@datamover:$dst"
+    rsync -a --rsync-path="mkdir -p $dst && rsync" "$prop_file" "ozagor@datamover:$dst"
     # save rsync exit status, if 0 then success
     rsync1=$?
 
@@ -85,9 +85,9 @@ write_miseq_run(){
         printf "DATASET_TYPE = DATAMOVER_SAMPLE_CREATOR\n"
     } > "$prop_file"
 
-    rsync -av "$prop_file" "ozagor@datamover:$dst"
+    rsync -a "$prop_file" "ozagor@datamover:$dst"
     rsync2=$?
-    if [ "$rsync1" -eq "0" && "$rsync2" -eq "0" ]; then
+    if [ "$rsync1" -eq "0" ] && [ "$rsync2" -eq "0" ]; then
         ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}"
     fi
 
@@ -125,7 +125,7 @@ write_miseq_sample(){
     if [[ $timavo == *"y"* ]]; then
         echo "TIMAVO"
         DST2="${timavoDST}/MiSeqOutput/${run_name}/Data/Intensities/BaseCalls/"
-        rsync -av --rsync-path="mkdir -p $DST2 && rsync" "$fastq_file" "timavo:$DST2"
+        rsync -a --rsync-path="mkdir -p $DST2 && rsync" "$fastq_file" "timavo:$DST2"
         if [ -e "$fastq_file_2" ]; then
             rsync "$fastq_file_2" "$DST2"
         fi
@@ -154,7 +154,7 @@ write_miseq_sample(){
     } > "$prop_file"
 
     dst="${datamoverDST}/${run_name}-${sample_number}"
-    rsync -av --rsync-path="mkdir -p $dst && rsync" "$prop_file" "ozagor@datamover:$dst"
+    rsync -a --rsync-path="mkdir -p $dst && rsync" "$prop_file" "ozagor@datamover:$dst"
     # save rsync exit status, if 0 then success
     rsync1=$?
 
@@ -168,12 +168,12 @@ write_miseq_sample(){
         printf "DATASET_TYPE = FASTQ\n"
     } > "$prop_file"
 
-    rsync -av "$prop_file" "ozagor@datamover:$dst"
+    rsync -a "$prop_file" "ozagor@datamover:$dst"
     rsync2=$?
 
     rsync3=0
     if [ -e "$fastq_file" ]; then
-        rsync -av "$fastq_file" "ozagor@datamover:$dst"
+        rsync -a "$fastq_file" "ozagor@datamover:$dst"
         rsync3=$?
         echo "R1 file exists"
     else
@@ -183,12 +183,16 @@ write_miseq_sample(){
     rsync4=0
     if [ -e "$fastq_file_2" ]; then
         echo "R2 file exists"
-        rsync -av "$fastq_file_2" "ozagor@datamover:$dst"
+        rsync -a "$fastq_file_2" "ozagor@datamover:$dst"
         rsync4=$?
     fi
 
-    if [ "$rsync1" -eq "0" && "$rsync2" -eq "0" && "$rsync3" -eq "0" && "$rsync4" -eq "0" ]; then
-        ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}-${sample_number}"
+    if [ "$rsync1" -eq "0" ] && [ "$rsync2" -eq "0" ] && [ "$rsync3" -eq "0" ] && [ "$rsync4" -eq "0" ]; then
+        echo "Touching void"
+	ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}-${sample_number}"
+    else
+	echo "Not touching"
+	echo "$rsync1 $rsync2 $rsync3 $rsync4"
     fi
 
 }
@@ -219,7 +223,7 @@ write_resistance_test(){
     } > "$prop_file"
 
     dst="${datamoverDST}/${run_name}-${sample_number}_RESISTANCE"
-    rsync -av --rsync-path="mkdir -p $dst && rsync" "$prop_file" "ozagor@datamover:$dst"
+    rsync -a --rsync-path="mkdir -p $dst && rsync" "$prop_file" "ozagor@datamover:$dst"
     # save rsync exit status, if 0 then success
     rsync1=$?
 
@@ -233,10 +237,10 @@ write_resistance_test(){
         printf "DATASET_TYPE = DATAMOVER_SAMPLE_CREATOR\n"
     } > "$prop_file"
 
-    rsync -av "$prop_file" "ozagor@datamover:$dst"
+    rsync -a "$prop_file" "ozagor@datamover:$dst"
     rsync2=$?
 
-    if [ "$rsync1" -eq "0" && "$rsync2" -eq "0" ]; then
+    if [ "$rsync1" -eq "0" ] && [ "$rsync2" -eq "0" ]; then
         ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}-${sample_number}_RESISTANCE"
     fi
 
