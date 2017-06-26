@@ -47,6 +47,7 @@ write_miseq_run(){
     MM=${datenum:2:2}
     DD=${datenum:4:2}
 
+    echo "Writing properties files for MISEQ_RUN:$1 PROJECT:$2"
     prop_file=sample.properties
     {
         printf "INVESTIGATOR_NAME = %s\n" "$Investigator_Name"
@@ -88,7 +89,7 @@ write_miseq_run(){
     rsync -a "$prop_file" "ozagor@datamover:$dst"
     rsync2=$?
     if [ "$rsync1" -eq "0" ] && [ "$rsync2" -eq "0" ]; then
-        ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}"
+        ssh ozagor@datamover touch "$datamoverDST/MARKER_is_finished_${run_name}"
     fi
 
 }
@@ -139,7 +140,7 @@ write_miseq_sample(){
     Project=${sample_line[8]}
 
     ### sample_type MISEQ_SAMPLE
-
+    echo "Writing properties files for MISEQ_SAMPLE ID:${sample_number} NAME:${sample_name}"
     prop_file=sample.properties
     {
         printf "SAMPLE_ID=%s\n" "${sample_number}"
@@ -189,10 +190,10 @@ write_miseq_sample(){
 
     if [ "$rsync1" -eq "0" ] && [ "$rsync2" -eq "0" ] && [ "$rsync3" -eq "0" ] && [ "$rsync4" -eq "0" ]; then
         echo "Touching void"
-	ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}-${sample_number}"
+        ssh ozagor@datamover touch "$datamoverDST/MARKER_is_finished_${run_name}-${sample_number}"
     else
-	echo "Not touching"
-	echo "$rsync1 $rsync2 $rsync3 $rsync4"
+        echo "Not touching"
+        echo "$rsync1 $rsync2 $rsync3 $rsync4"
     fi
 
 }
@@ -211,6 +212,8 @@ write_resistance_test(){
     viral_load=${sample_line[13]}
 
     run_name=$(basename "$rundir")
+
+    echo "Writing properties files for RESISTANCE_TEST RUN:${run_name} SAMPLE:${sample_name}"
 
     ### write properties file
     prop_file=sample.properties
@@ -241,7 +244,7 @@ write_resistance_test(){
     rsync2=$?
 
     if [ "$rsync1" -eq "0" ] && [ "$rsync2" -eq "0" ]; then
-        ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}-${sample_number}_RESISTANCE"
+        ssh ozagor@datamover touch "$datamoverDST/MARKER_is_finished_${run_name}-${sample_number}_RESISTANCE"
     fi
 
 }
@@ -280,12 +283,10 @@ process_runs(){
     ### with a newline
     while IFS=',' read -r -a line || [[ -n "$line" ]]
     do
-
         # if [[ "$count_openbis" == 0 ]]
         # then
         #     break
         # fi
-
         if [[ ${line[0]} =~ ^\[[[:alpha:]]*\] ]]
         then
             section=${line[0]}
@@ -324,25 +325,34 @@ process_runs(){
         ### [Data] section values
         elif [[ $section == "[Data]" && ${line[1]} && $s -gt 0 ]]
         then
-
-            if [[ ${line[8]} == "Antibodies" ]]; then
-                anti_sample=true
-            elif [[ ${line[8]} == "Metagenomics" ]]; then
-                meta_sample=true
-            elif [[ ${line[8]} == "Other" ]]; then
-                other_sample=true
-            elif [[ ${line[8]} == "Plasmids" ]]; then
-                plasm_sample=true
-            elif [[ ${line[8]} == "Resistance" ]]; then
-                res_sample=true
-                write_resistance_test line[@]
-            fi
+            echo "Calling write_miseq_sample on ${line[1]}"
             write_miseq_sample line[@]
 
+            case ${line[8]} in
+              Antibodies)
+                anti_sample=true
+                ;;
+              Metagenomics)
+                meta_sample=true
+                echo "TRUISM"
+                ;;
+              Other)
+                other_sample=true
+                ;;
+              Plasmids)
+                plasm_sample=true
+                ;;
+              Resistance)
+                res_sample=true
+                write_resistance_test line[@]
+                ;;
+              esac
+            echo "Adding"
             ((s+=1))
         fi
+    echo ${line[@]}
     done < sample_sheet.tmp
-
+    echo "s=$s"
     echo "Syncing SampleSheet to timavo"
     run_name=$(basename "$rundir")
     smpshdst="${timavoDST}/MiSeqOutput/${run_name}/Data/Intensities/BaseCalls/"
