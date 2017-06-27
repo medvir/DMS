@@ -1,5 +1,6 @@
 #!/bin/bash
 
+#set -x  # uncomment for debugging
 incomingdir=/cygdrive/D/Illumina/MiSeqOutput
 timavoDST=/data/MiSeq
 datamoverDST=data/outgoing
@@ -89,7 +90,9 @@ write_miseq_run(){
     rsync -a "$prop_file" "ozagor@datamover:$dst"
     rsync2=$?
     if [ "$rsync1" -eq "0" ] && [ "$rsync2" -eq "0" ]; then
-        ssh ozagor@datamover touch "$datamoverDST/MARKER_is_finished_${run_name}"
+        ssh ozagor@datamover touch "$datamoverDST/MARKER_is_finished_${run_name}" </dev/null
+    else
+        echo -e "WATCH OUT: touching the void! $rsync1 $rsync2 $rsync3 $rsync4"
     fi
 
 }
@@ -124,14 +127,14 @@ write_miseq_sample(){
     fastq_file_2=$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_R2_001.fastq.gz
 
     if [[ $timavo == *"y"* ]]; then
-        echo "TIMAVO"
+        echo "Syncing to TIMAVO"
         DST2="${timavoDST}/MiSeqOutput/${run_name}/Data/Intensities/BaseCalls/"
         rsync -a --rsync-path="mkdir -p $DST2 && rsync" "$fastq_file" "timavo:$DST2"
         if [ -e "$fastq_file_2" ]; then
             rsync "$fastq_file_2" "$DST2"
         fi
       else
-        echo "NO TIMAVO"
+        echo "Not syncing to TIMAVO"
     fi
 
     ### write properties file
@@ -176,24 +179,24 @@ write_miseq_sample(){
     if [ -e "$fastq_file" ]; then
         rsync -a "$fastq_file" "ozagor@datamover:$dst"
         rsync3=$?
-        echo "R1 file exists"
+        # echo "R1 file exists, rsync returns $rsync3"
     else
         echo "R1 file does not exist"
     fi
 
     rsync4=0
     if [ -e "$fastq_file_2" ]; then
-        echo "R2 file exists"
         rsync -a "$fastq_file_2" "ozagor@datamover:$dst"
         rsync4=$?
+        echo "R2 file exists, rsync returns $rsync4"
+    # else
+    #     echo "R2 file does not exist"
     fi
 
     if [ "$rsync1" -eq "0" ] && [ "$rsync2" -eq "0" ] && [ "$rsync3" -eq "0" ] && [ "$rsync4" -eq "0" ]; then
-        echo "Touching void"
-        ssh ozagor@datamover touch "$datamoverDST/MARKER_is_finished_${run_name}-${sample_number}"
+        ssh ozagor@datamover touch "$datamoverDST/MARKER_is_finished_${run_name}-${sample_number}" </dev/null
     else
-        echo "Not touching"
-        echo "$rsync1 $rsync2 $rsync3 $rsync4"
+        echo -e "WATCH OUT: touching the void! $rsync1 $rsync2 $rsync3 $rsync4"
     fi
 
 }
@@ -244,7 +247,9 @@ write_resistance_test(){
     rsync2=$?
 
     if [ "$rsync1" -eq "0" ] && [ "$rsync2" -eq "0" ]; then
-        ssh ozagor@datamover touch "$datamoverDST/MARKER_is_finished_${run_name}-${sample_number}_RESISTANCE"
+        ssh ozagor@datamover touch "$datamoverDST/MARKER_is_finished_${run_name}-${sample_number}_RESISTANCE" </dev/null
+    else
+        echo -e "WATCH OUT: touching the void! $rsync1 $rsync2 $rsync3 $rsync4"
     fi
 
 }
@@ -255,7 +260,6 @@ process_runs(){
     # call process_sample on all lines in [Data] section
 
     rundir=$1
-
     if [[ -e $rundir/.UPLOADED_RUN ]]; then
         echo "Run $rundir already uploaded"
         return
@@ -325,7 +329,7 @@ process_runs(){
         ### [Data] section values
         elif [[ $section == "[Data]" && ${line[1]} && $s -gt 0 ]]
         then
-            echo "Calling write_miseq_sample on ${line[1]}"
+
             write_miseq_sample line[@]
 
             case ${line[8]} in
@@ -334,7 +338,6 @@ process_runs(){
                 ;;
               Metagenomics)
                 meta_sample=true
-                echo "TRUISM"
                 ;;
               Other)
                 other_sample=true
@@ -344,20 +347,18 @@ process_runs(){
                 ;;
               Resistance)
                 res_sample=true
-                write_resistance_test line[@]
+                # write_resistance_test line[@]
                 ;;
               esac
-            echo "Adding"
             ((s+=1))
         fi
-    echo ${line[@]}
+
     done < sample_sheet.tmp
-    echo "s=$s"
+
     echo "Syncing SampleSheet to timavo"
     run_name=$(basename "$rundir")
     smpshdst="${timavoDST}/MiSeqOutput/${run_name}/Data/Intensities/BaseCalls/"
     rsync -av --rsync-path="mkdir -p $smpshdst && rsync" sample_sheet.tmp "timavo:$smpshdst/SampleSheet.csv"
-    echo "Synced to timavo"
     rm sample_sheet.tmp
 
     # if any sample was X then write Miseq run sample with PROJECT = X
