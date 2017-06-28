@@ -352,7 +352,7 @@ process_runs(){
                 ;;
               Resistance)
                 res_sample=true
-                # write_resistance_test line[@]
+                write_resistance_test line[@]
                 ;;
               esac
             ((s+=1))
