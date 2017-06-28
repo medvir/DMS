@@ -91,7 +91,7 @@ write_miseq_run(){
     rsync -a "$prop_file" "ozagor@datamover:$dst"
     rsync2=$?
     if [ "$rsync1" -eq "0" ] && [ "$rsync2" -eq "0" ]; then
-        ssh ozagor@datamover touch "$datamoverDST/MARKER_is_finished_${run_name}" </dev/null
+        ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}" </dev/null
     else
         echo -e "WATCH OUT: touching the void! $rsync1 $rsync2 $rsync3 $rsync4"
     fi
@@ -199,7 +199,7 @@ write_miseq_sample(){
     fi
 
     if [ "$rsync1" -eq "0" ] && [ "$rsync2" -eq "0" ] && [ "$rsync3" -eq "0" ] && [ "$rsync4" -eq "0" ]; then
-        ssh ozagor@datamover touch "$datamoverDST/MARKER_is_finished_${run_name}-${sample_number}" </dev/null
+        ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}-${sample_number}" </dev/null
     else
         echo -e "WATCH OUT: touching the void! $rsync1 $rsync2 $rsync3 $rsync4"
     fi
@@ -252,7 +252,7 @@ write_resistance_test(){
     rsync2=$?
 
     if [ "$rsync1" -eq "0" ] && [ "$rsync2" -eq "0" ]; then
-        ssh ozagor@datamover touch "$datamoverDST/MARKER_is_finished_${run_name}-${sample_number}_RESISTANCE" </dev/null
+        ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}-${sample_number}_RESISTANCE" </dev/null
     else
         echo -e "WATCH OUT: touching the void! $rsync1 $rsync2 $rsync3 $rsync4"
     fi
