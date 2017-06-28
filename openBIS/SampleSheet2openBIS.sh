@@ -73,11 +73,8 @@ write_miseq_run(){
     rsync1=$?
 
     ### sample_type MISEQ_RUN
-    if [[ $2 == "Resistance" ]]; then
-        project_to_write="RESISTANCE_TESTING"
-    else
-        project_to_write=$2
-    fi
+    project_to_write=$2
+
     prop_file=dataset.properties
     {
         printf "SPACE = IMV\n"
@@ -160,12 +157,7 @@ write_miseq_sample(){
     # save rsync exit status, if 0 then success
     rsync1=$?
 
-    # Project from Sample_Project column
-    if [[ ${sample_line[8]} == "Resistance" ]]; then
-        Project="RESISTANCE_TESTING"
-    else
-        Project=${sample_line[8]}
-    fi
+    Project=${sample_line[8]}
 
     prop_file=dataset.properties
     {
@@ -241,7 +233,7 @@ write_resistance_test(){
     prop_file=dataset.properties
     {
         printf "SPACE = IMV\n"
-        printf "PROJECT = RESISTANCE_TESTING\n"
+        printf "PROJECT = RESISTANCE\n"
         printf "EXPERIMENT = RESISTANCE_TESTS\n"
         printf "SAMPLE = %s-%s_RESISTANCE\n" "${run_name}" "${sample_number}"
         printf "SAMPLE_TYPE = RESISTANCE_TEST\n"
