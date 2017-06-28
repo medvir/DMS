@@ -8,7 +8,8 @@ datamoverDST=data/outgoing
 # define these globally so no need to pass it as a function parameter
 headers='undefined'
 rundir='undefined'
-IEMFileVersion='undefined'
+# IEMFileVersion='undefined'
+Account=''
 Investigator_Name='undefined'
 Experiment_Name='undefined'
 #Date='undefined'
@@ -20,8 +21,8 @@ Chemistry='undefined'
 Read1=''
 Read2=''
 PhiX='undefined'
-RGT_Box_1='undefined'
-RGT_Box_2='undefined'
+RGT_box1='undefined'
+RGT_box2='undefined'
 openbis='n'
 timavo='n'
 
@@ -139,9 +140,6 @@ write_miseq_sample(){
 
     ### write properties file
 
-    # Project from Sample_Project column
-    Project=${sample_line[8]}
-
     ### sample_type MISEQ_SAMPLE
     echo "Writing properties files for MISEQ_SAMPLE ID:${sample_number} NAME:${sample_name}"
     prop_file=sample.properties
@@ -161,6 +159,13 @@ write_miseq_sample(){
     rsync -a --rsync-path="mkdir -p $dst && rsync" "$prop_file" "ozagor@datamover:$dst"
     # save rsync exit status, if 0 then success
     rsync1=$?
+
+    # Project from Sample_Project column
+    if [[ ${sample_line[8]} == "Resistance" ]]; then
+        Project="RESISTANCE_TESTING"
+    else
+        Project=${sample_line[8]}
+    fi
 
     prop_file=dataset.properties
     {
@@ -223,7 +228,7 @@ write_resistance_test(){
     {
         printf "SAMPLE_NAME=%s\n" "$sample_name"
         printf "VIRUS=%s\n" "$virus"
-        printf "TARGET_TYPE=%s\n" "$target"
+        printf "TARGET_REGION=%s\n" "$target"
         printf "GENOTYPE=%s\n" "$genotype"
         printf "VIRAL_LOAD=%s\n" "$viral_load"
     } > "$prop_file"
@@ -399,8 +404,8 @@ process_runs(){
     Read1=''
     Read2=''
     PhiX='undefined'
-    RGT_Box_1='undefined'
-    RGT_Box_2='undefined'
+    RGT_box1='undefined'
+    RGT_box2='undefined'
     openbis='n'
 
     touch "$rundir/.UPLOADED_RUN"
