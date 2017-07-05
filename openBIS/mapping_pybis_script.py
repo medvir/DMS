@@ -11,7 +11,25 @@ import subprocess
 from pybis import Openbis
 
 logging.basicConfig(filename='pybis_script.log', level=logging.DEBUG,
-                    format='%(levelname)s %(asctime)s %(filename)s: %(funcName)s() %(lineno)d: \t%(message)s', datefmt='%Y/%m/%d %H:%M:%S')
+                    format='%(levelname)s %(asctime)s %(filename)s: %(funcName)s() %(lineno)d: \t%(message)s',
+                    datefmt='%Y/%m/%d %H:%M:%S')
+
+
+def run_child(cmd, exe='/bin/bash'):
+    '''use subrocess.check_output to run an external program with arguments'''
+    logging.debug('Running instance of %s' % cmd.split()[0])
+    try:
+        output = subprocess.check_output(cmd, universal_newlines=True,
+        shell=True,
+#        executable=exe,
+        stderr=subprocess.STDOUT)
+        logging.debug('Completed')
+    except subprocess.CalledProcessError as ee:
+        logging.error("Execution of %s failed with returncode %d: %s" % (cmd, ee.returncode, ee.output))
+        logging.error(cmd)
+        output = None
+    return output
+
 
 def general_mapping(project=None):
     '''Create parent-child relationships in a project, like
@@ -72,32 +90,43 @@ def general_mapping(project=None):
                 logging.debug('sample %s already mapped' % resi_sample_id)
 
 
-def run_child(cmd, exe='/bin/bash'):
-    '''use subrocess.check_output to run an external program with arguments'''
-    logging.debug('Running instance of %s' % cmd.split()[0])
-    try:
-        output = subprocess.check_output(cmd, universal_newlines=True,
-        shell=True,
-#        executable=exe,
-        stderr=subprocess.STDOUT)
-        logging.debug('Completed')
-    except subprocess.CalledProcessError as ee:
-        logging.error("Execution of %s failed with returncode %d: %s" % (cmd, ee.returncode, ee.output))
-        logging.error(cmd)
-        output = None
-    return output
-
-
 def run_minvar(fastq_file):
-    files_to_save = ['report.md', 'annotated_DRM.csv']
+    '''Run minvar on the input file in a tmp directory and returns some output
+    files
+    '''
+    files_to_save = ['report.md', 'annotated_DRM.csv', 'minvar.err', 'report.pdf']
+    cwd = os.getcwd()
     with tempfile.TemporaryDirectory() as tmpdirname:
-        print('going to temporary directory', tmpdirname)
+        logging.debug('going to temporary directory', tmpdirname)
         os.chdir(tmpdirname)
-        run_child('minvar -f %s &> /tmp/minvar.log' % fastq_file)
-        print('minvar finished, copying files')
+        run_child('minvar -f %s &> minvar.err' % fastq_file)
         saved_files = {fn: open(fn).readlines() for fn in files_to_save}
+        print(saved_files.keys())
+        os.chdir(cwd)
     return saved_files
 
+
+def add_minvar_files(smp):
+    '''
+    '''
+    for rd in smp.get_datasets(type='FASTQ'):
+        od = rd.download(destination='/tmp', wait_until_finished=True)
+        for file_path in rd.file_list:
+            # build full path of downloaded files
+            full_path = '/tmp/%s/%s' % (rd.permId, file_path)
+            assert os.path.exists(full_path), full_path
+            if 'fastq' in os.path.basename(file_path) or 'fq' in os.path.basename(file_path):
+                fastq_path = full_path
+        logging.info('Running minvar on %s' % fastq_path)
+        minvar_output = run_minvar(fastq_path)
+        for k, v in minvar_output.items():
+            fh = open(k, 'w')
+            for line in v:
+                fh.write(line)
+            fh.close()
+            smp.add_attachment(k)
+        smp.add_tags('analysed')
+        smp.save()
 
 # open the session first
 o = Openbis('https://s3itdata.uzh.ch', verify_certificates=True)
@@ -107,25 +136,18 @@ if not o.is_session_active():
     # saves token in ~/.pybis/example.com.token
     o.login('ozagor', password, save_token=True)
 
-# iterate through resistance datasets to run minvar
+# iterate through resistance samples to run minvar
+#res_samples = o.get_experiment('/IMV/RESISTANCE/MISEQ_SAMPLES').get_samples(tags=['mapped'])
+#res_samples = o.get_experiment('/OZAGOR/IMV_TEST_PROJECT/TEST_EXP_SAMPLES').get_samples()
+res_samples = [o.get_sample('/OZAGOR/SMALL-170623_M02081_0218_000000000-B4CPG-1')]
+for sample in res_samples:
+    print(sample.code)
+#    if sample.code == 'SMALL-170623_M02081_0218_000000000-B4CPG-1':
+#        add_minvar_files(sample)
 
-# res_datasets = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(tags=['mapped']).get_datasets()
-res_datasets = o.get_experiment('/IMV/RESISTANCE/MISEQ_SAMPLES').get_samples(tags=['mapped']).get_datasets(type='FASTQ')
-for rd in res_datasets:
-    od = rd.download(destination='/tmp', wait_until_finished=True)
-    for file_path in rd.file_list:
-        # build full path of downloaded files
-        full_path = '/tmp/%s/%s' % (rd.permId, file_path)
-        assert os.path.exists(full_path), full_path
-        if 'fastq' in os.path.basename(file_path) or 'fq' in os.path.basename(file_path):
-            fastq_path = full_path
-    logging.info('Running minvar on', fastq_path)
-    minvar_output = run_minvar(fastq_path)
-    for k, v in minvar_output:
-        fh = open(k, 'w')
-        fh.write(v)
-        fh.close()
-    break
+for rd in o.get_sample('/OZAGOR/SMALL-170623_M02081_0218_000000000-B4CPG-1').get_datasets():
+    print(rd)
+
 sys.exit()
 general_mapping('metagenomics')
 general_mapping('resistance')
