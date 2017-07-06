@@ -94,7 +94,7 @@ def run_minvar(fastq_file):
     '''Run minvar on the input file in a tmp directory and returns some output
     files
     '''
-    files_to_save = ['report.md', 'annotated_DRM.csv', 'minvar.err', 'report.pdf']
+    files_to_save = ['report.md', 'annotated_DRM.csv', 'minvar.err']
     cwd = os.getcwd()
     with tempfile.TemporaryDirectory() as tmpdirname:
         logging.debug('going to temporary directory', tmpdirname)
@@ -106,9 +106,10 @@ def run_minvar(fastq_file):
     return saved_files
 
 
-def add_minvar_files(smp):
+def add_minvar_files(smp_code):
     '''
     '''
+    smp = o.get_sample('/OZAGOR/%s' % smp_code)
     for rd in smp.get_datasets(type='FASTQ'):
         od = rd.download(destination='/tmp', wait_until_finished=True)
         for file_path in rd.file_list:
@@ -137,16 +138,24 @@ if not o.is_session_active():
     o.login('ozagor', password, save_token=True)
 
 # iterate through resistance samples to run minvar
-#res_samples = o.get_experiment('/IMV/RESISTANCE/MISEQ_SAMPLES').get_samples(tags=['mapped'])
-#res_samples = o.get_experiment('/OZAGOR/IMV_TEST_PROJECT/TEST_EXP_SAMPLES').get_samples()
-res_samples = [o.get_sample('/OZAGOR/SMALL-170623_M02081_0218_000000000-B4CPG-1')]
-for sample in res_samples:
-    print(sample.code)
-#    if sample.code == 'SMALL-170623_M02081_0218_000000000-B4CPG-1':
-#        add_minvar_files(sample)
+# res_samples = o.get_experiment('/IMV/RESISTANCE/MISEQ_SAMPLES').get_samples(tags=['mapped'])
+# res_samples = o.get_experiment('/OZAGOR/IMV_TEST_PROJECT/TEST_EXP_SAMPLES').get_samples()
+# res_samples = [o.get_sample('/OZAGOR/SMALL-170623_M02081_0218_000000000-B4CPG-1')]
+#res_test_samples = [o.get_sample('/OZAGOR/TEST_SAMPLE_DATASET_3')]
+res_test_samples = o.get_experiment('/OZAGOR/IMV_TEST_PROJECT/TEST_EXP_RESISTANCE').get_samples()
+#res_test_samples = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(tags=['mapped'])
 
-for rd in o.get_sample('/OZAGOR/SMALL-170623_M02081_0218_000000000-B4CPG-1').get_datasets():
-    print(rd)
+for sample in res_test_samples:
+    virus = sample.props.virus
+    print(sample.code, virus)
+    parents = sample.get_parents()
+    print(len(parents))
+    parent = parents[0]
+    print(parent.code)
+    print('-----------')
+    for rd in parent.get_datasets():
+        if virus == 'HIV':
+            add_minvar_files(parent.code)
 
 sys.exit()
 general_mapping('metagenomics')
