@@ -52,8 +52,15 @@ def general_mapping(project=None):
     samples_dict = {}
     for xp in proj.get_experiments():
         xp_name = str(xp.type)
-        codes_here = [smp.code for smp in xp.get_samples()]
+        try:
+            codes_here = [smp.code for smp in xp.get_samples()]
+        except ValueError as ee:
+            logging.error('No samples here?')
+            logging.error(str(ee))
+            codes_here = []
         samples_dict[xp_name] = codes_here
+
+    logging.info('Found %d miseq samples' % len(samples_dict['MISEQ_SAMPLES']))
 
     for miseq_sample_id in samples_dict['MISEQ_SAMPLES']:
         # e.g.
@@ -140,6 +147,13 @@ if not o.is_session_active():
     # saves token in ~/.pybis/example.com.token
     o.login('ozagor', password, save_token=True)
 
+logging.info('Mapping session starting')
+# map samples in each project
+for project in ['metagenomics', 'resistance', 'antibodies', 'plasmids', 'other']:
+    general_mapping(project)
+logging.info('Mapping session finished')
+
+logging.info('Analysis session starting')
 # iterate through resistance samples to run minvar
 res_test_samples = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(tags=['mapped'])
 
@@ -174,6 +188,4 @@ for sample in res_test_samples:
     sample.add_tags('analysed')
     sample.save()
     print('-----------')
-
-for project in ['metagenomics', 'resistance']:
-    general_mapping(project)
+logging.info('Analysis session finished')
