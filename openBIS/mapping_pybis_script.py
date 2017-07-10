@@ -11,7 +11,7 @@ import tempfile
 import subprocess
 from pybis import Openbis
 
-logging.basicConfig(filename='pybis_script.log', level=logging.INFO,
+logging.basicConfig(filename='/home/ubuntu/pybis_script.log', level=logging.INFO,
                     format='%(levelname)s %(asctime)s %(filename)s: %(funcName)s() %(lineno)d: \t%(message)s',
                     datefmt='%Y/%m/%d %H:%M:%S')
 
