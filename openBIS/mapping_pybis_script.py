@@ -94,19 +94,26 @@ def run_minvar(fastq_file):
     '''Run minvar on the input file in a tmp directory and returns some output
     files
     '''
-    files_to_save = ['report.md', 'annotated_DRM.csv', 'minvar.err']
+    files_to_save = ['report.md', 'annotated_DRM.csv', 'minvar.err', 'minvar.log', 'report.pdf']
     cwd = os.getcwd()
     with tempfile.TemporaryDirectory() as tmpdirname:
-        logging.debug('going to temporary directory', tmpdirname)
+        logging.debug('going to temporary directory %s' % tmpdirname)
         os.chdir(tmpdirname)
         run_child('minvar -f %s &> minvar.err' % fastq_file)
-        saved_files = {fn: open(fn).readlines() for fn in files_to_save}
+        saved_files = {}
+        for fn in files_to_save:
+            try:
+                saved_files[fn] = open(fn).readlines()
+                logging.debug('Written %d lines to %s' % (len(saved_files[fn]), fn))
+            except FileNotFoundError as err:
+                logging.error(str(err))
+                saved_files[fn] = ['File not found\n']
         print(saved_files.keys())
         os.chdir(cwd)
     return saved_files
 
 
-def add_minvar_files(smp_code):
+def get_minvar_files(smp_code):
     '''
     '''
     smp = o.get_sample('/OZAGOR/%s' % smp_code)
@@ -120,14 +127,7 @@ def add_minvar_files(smp_code):
                 fastq_path = full_path
         logging.info('Running minvar on %s' % fastq_path)
         minvar_output = run_minvar(fastq_path)
-        for k, v in minvar_output.items():
-            fh = open(k, 'w')
-            for line in v:
-                fh.write(line)
-            fh.close()
-            smp.add_attachment(k)
-        smp.add_tags('analysed')
-        smp.save()
+        return minvar_output
 
 # open the session first
 o = Openbis('https://s3itdata.uzh.ch', verify_certificates=True)
@@ -147,16 +147,30 @@ res_test_samples = o.get_experiment('/OZAGOR/IMV_TEST_PROJECT/TEST_EXP_RESISTANC
 
 for sample in res_test_samples:
     virus = sample.props.virus
-    print(sample.code, virus)
+    if virus != 'HIV':
+        continue
+    print('Sample is', sample.code, virus)
     parents = sample.get_parents()
-    print(len(parents))
+    assert len(parents) == 1
     parent = parents[0]
-    print(parent.code)
-    print('-----------')
-    for rd in parent.get_datasets():
-        if virus == 'HIV':
-            add_minvar_files(parent.code)
+    print('Parent is', parent.code, parent.props.description)
 
+    try:
+        rd = parent.get_datasets()[0]
+        minvar_files = get_minvar_files(parent.code)
+    except ValueError:
+        print('No datasets')
+        continue
+
+    for k, v in minvar_files.items():
+        fh = open(k, 'w')
+        for line in v:
+            fh.write(line)
+            fh.close()
+            sample.add_attachment(k)
+    sample.add_tags('analysed')
+    sample.save()
+    print('-----------')
 sys.exit()
 general_mapping('metagenomics')
 general_mapping('resistance')
