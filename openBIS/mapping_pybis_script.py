@@ -3,6 +3,7 @@
 import os
 import sys
 import glob
+import codecs
 import getpass
 import logging
 import logging.handlers
@@ -10,7 +11,7 @@ import tempfile
 import subprocess
 from pybis import Openbis
 
-logging.basicConfig(filename='pybis_script.log', level=logging.DEBUG,
+logging.basicConfig(filename='pybis_script.log', level=logging.INFO,
                     format='%(levelname)s %(asctime)s %(filename)s: %(funcName)s() %(lineno)d: \t%(message)s',
                     datefmt='%Y/%m/%d %H:%M:%S')
 
@@ -37,7 +38,7 @@ def general_mapping(project=None):
     For resistance tests, the full relationship is
     MISEQ_RUN -> MISEQ_SAMPLE -> RESISTANCE_TEST
     '''
-    logging.debug('Mapping called for project', project)
+    logging.info('Mapping called for project %s' % project)
     p_code = project.upper()
     valid_projects = ['RESISTANCE', 'METAGENOMICS', 'PLASMIDS', 'OTHER',
                       'ANTIBODIES']
@@ -45,7 +46,7 @@ def general_mapping(project=None):
         sys.exit('Choose a valid project: %s' % ','.join(valid_projects))
 
     proj = o.get_projects(space='IMV', code=p_code)[0]
-    logging.debug('We are here in project', proj.code)
+    logging.debug('We are here in project %s' % proj.code)
 
     # dict with a list of samples from each experiment in this project
     samples_dict = {}
@@ -74,6 +75,7 @@ def general_mapping(project=None):
             miseq_sample.add_parents('/IMV/%s' % miseq_run_id)
             miseq_sample.add_tags('mapped')
             miseq_sample.save()
+            logging.info('sample %s mapped' % miseq_sample_id)
         else:
             logging.debug('sample %s already mapped' % miseq_sample_id)
 
@@ -103,20 +105,21 @@ def run_minvar(fastq_file):
         saved_files = {}
         for fn in files_to_save:
             try:
-                saved_files[fn] = open(fn).readlines()
-                logging.debug('Written %d lines to %s' % (len(saved_files[fn]), fn))
+                print('Reading', fn)
+                saved_files[fn] = open(fn, "rb").read()
+                logging.debug('Written %d bytes to %s' % (len(saved_files[fn]), fn))
             except FileNotFoundError as err:
                 logging.error(str(err))
-                saved_files[fn] = ['File not found\n']
+                saved_files[fn] = b'File not found\n'
         print(saved_files.keys())
-        os.chdir(cwd)
+    os.chdir(cwd)
     return saved_files
 
 
 def get_minvar_files(smp_code):
     '''
     '''
-    smp = o.get_sample('/OZAGOR/%s' % smp_code)
+    smp = o.get_sample(smp_code)
     for rd in smp.get_datasets(type='FASTQ'):
         od = rd.download(destination='/tmp', wait_until_finished=True)
         for file_path in rd.file_list:
@@ -138,39 +141,39 @@ if not o.is_session_active():
     o.login('ozagor', password, save_token=True)
 
 # iterate through resistance samples to run minvar
-# res_samples = o.get_experiment('/IMV/RESISTANCE/MISEQ_SAMPLES').get_samples(tags=['mapped'])
-# res_samples = o.get_experiment('/OZAGOR/IMV_TEST_PROJECT/TEST_EXP_SAMPLES').get_samples()
-# res_samples = [o.get_sample('/OZAGOR/SMALL-170623_M02081_0218_000000000-B4CPG-1')]
-#res_test_samples = [o.get_sample('/OZAGOR/TEST_SAMPLE_DATASET_3')]
-res_test_samples = o.get_experiment('/OZAGOR/IMV_TEST_PROJECT/TEST_EXP_RESISTANCE').get_samples()
-#res_test_samples = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(tags=['mapped'])
+res_test_samples = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(tags=['mapped'])
 
 for sample in res_test_samples:
     virus = sample.props.virus
     if virus != 'HIV':
+        logging.debug('Virus is not HIV')
         continue
-    print('Sample is', sample.code, virus)
+    if 'analysed' in sample.tags:
+        logging.debug('Sample already analysed')
+        continue
+    logging.info('Found resistance sample: %s' % sample.code)
     parents = sample.get_parents()
     assert len(parents) == 1
     parent = parents[0]
-    print('Parent is', parent.code, parent.props.description)
-
+    logging.info('Parent: %s' % parent.code)
+    continue
     try:
         rd = parent.get_datasets()[0]
-        minvar_files = get_minvar_files(parent.code)
+        logging.debug('Datasets found')
     except ValueError:
-        print('No datasets')
+        logging.warning('No datasets')
         continue
 
+    minvar_files = get_minvar_files('/IMV/%s' % parent.code)
     for k, v in minvar_files.items():
-        fh = open(k, 'w')
-        for line in v:
-            fh.write(line)
-            fh.close()
-            sample.add_attachment(k)
+        fh = open(k, 'wb')
+        fh.write(v)
+        fh.close()
+        sample.add_attachment(k)
+        os.remove(k)
     sample.add_tags('analysed')
     sample.save()
     print('-----------')
-sys.exit()
-general_mapping('metagenomics')
-general_mapping('resistance')
+
+for project in ['metagenomics', 'resistance']:
+    general_mapping(project)
