@@ -347,7 +347,7 @@ process_runs(){
     ### remove spaces in sample sheet
     #sed -e "s/ /_/g" < "$rundir/Data/Intensities/BaseCalls/SampleSheet.csv" > sample_sheet.tmp
     # sample sheets are now created with Stefan's template: no need to remove them anymore
-    cp "$rundir/Data/Intensities/BaseCalls/SampleSheet.csv" sample_sheet.tmp
+    cp "$rundir/SampleSheet.csv" sample_sheet.tmp
     count_openbis=$(grep -c openbis sample_sheet.tmp)
     ### counters for read 1/2 and samples
     r=0
