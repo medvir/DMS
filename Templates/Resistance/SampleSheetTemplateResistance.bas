@@ -225,6 +225,22 @@ Sub validate()
     Selection.Offset(1, 0).Select
     Loop
     
+    'Validate viral_load
+    Range("N25").Select
+    Do Until ActiveCell.Value = vbNullString And Selection.Offset(0, -12) = vbNullString
+    
+    If ActiveCell.Value = vbNullString Then
+        Selection.Interior.ColorIndex = 0
+    ElseIf Selection.Validation.Value Then
+        Selection.Interior.ColorIndex = 0
+    Else
+        exceptionCount = exceptionCount + 1
+        Selection.Interior.ColorIndex = 6
+    End If
+    
+    Selection.Offset(1, 0).Select
+    Loop
+    
     'Validate timavo
     Range("O25").Select
     Do Until ActiveCell.Value = vbNullString And Selection.Offset(0, -13) = vbNullString
