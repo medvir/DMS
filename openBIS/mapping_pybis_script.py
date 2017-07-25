@@ -159,7 +159,7 @@ res_test_samples = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samp
 
 for sample in res_test_samples:
     virus = sample.props.virus
-    if virus != 'HIV':
+    if virus != 'HIV-1':
         logging.debug('Virus is not HIV')
         continue
     if 'analysed' in sample.tags:
