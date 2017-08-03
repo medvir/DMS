@@ -1,12 +1,8 @@
-# All columns except "identifier" can be removed from the file.
-# If a column is removed from the file or a cell in a column is left empty the corresponding values of updated samples will be preserved.
-# To delete a value/connection from openBIS one needs to put "--DELETE--"  or \"__DELETE__\" into the corresponding cell
-# (in particular, a sample can become detached from an experiment, container or all parents this way).
-# Basically the "identifier" column should contain sample identifiers, e.g. /SPACE/SAMPLE_1,
-# but for samples from default space (if it was provided in the form) it is enough to put sample codes (e.g. SAMPLE_1) into the column.
-# The "container" column (if not removed) should contain sample identifier for the new container of the updated sample, e.g. /SPACE/SAMPLE_1
-# The "parent" column (if not removed) should contain comma separated list of sample identifiers, e.g. /SPACE/SAMPLE_1,/SPACE/SAMPLE_2
-# The "experiment" column (if not removed) should contain experiment identifier, e.g. /SPACE/PROJECT/EXP_1
+# The "container" and "parents" columns are optional, only one should be specified.
+# "container" should contain a sample identifier, e.g. /SPACE/SAMPLE_1, while "parents" should contain comma separated list of sample identifiers. 
+# If "container" sample is provided, the registered sample will become a "component" of it.
+# The column "container" has an alias "current_container", which has a different meaning when samples are updated.
+# If "parents" are provided, the registered sample will become a "child" of all specified samples.
+# The "experiment" column is optional, cannot be specified for shared samples and should contain experiment identifier, e.g. /SPACE/PROJECT/EXP_1
 # The "default_space" column is optional, it can be used to override home space for the row
-# The "current_container" column is optional, it can be used to specify container where the updated sample belongs before the update
 identifier	container	parents	experiment	default_space	SAMPLE_ID	SAMPLE_NAME	SAMPLE_PLATE	SAMPLE_WELL	INDEX_1	INDEX_2	I7_INDEX_ID	I5_INDEX_ID	DESCRIPTION
