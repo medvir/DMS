@@ -64,10 +64,10 @@ FileMakerRuns = read_csv(FileMakerRunsFile, col_names = FALSE) %>%
                CHEMISTRY = "",
                RGT_BOX_1 = paste0("RGT", RGT_BOX_1),
                RGT_BOX_2 = paste0("RGT", RGT_BOX_2),
-               Tags = "FileMaker") %>%
+               tags = "FileMaker") %>%
         
         select(identifier, experiment, default_space, INVESTIGATOR_NAME, EXPERIMENT_NAME, RUN_NAME, SAMPLE_SHEET_NAME, ACCOUNT, DATE,
-               MISEQ_WORKFLOW, APPLICATION, ASSAY, DESCRIPTION, CHEMISTRY, READ_1, READ_2, PHIX_CONCENTRATION, RGT_BOX_1, RGT_BOX_2)
+               MISEQ_WORKFLOW, APPLICATION, ASSAY, DESCRIPTION, CHEMISTRY, READ_1, READ_2, PHIX_CONCENTRATION, RGT_BOX_1, RGT_BOX_2, tags)
 
 FileMakerRuns[is.na(FileMakerRuns)] = ""
 
@@ -117,10 +117,10 @@ FileMakerSamples = read_csv(FileMakerSamplesFile, col_names = FALSE) %>%
                SAMPLE_WELL = "",
                INDEX_1 = "",
                INDEX_2 = "",
-               Tags = "FileMaker") %>%
+               tags = "FileMaker") %>%
         
         ungroup %>%
-        select(identifier, parents, experiment, default_space, SAMPLE_ID, SAMPLE_NAME, SAMPLE_PLATE, SAMPLE_WELL, INDEX_1, INDEX_2, I7_INDEX_ID, I5_INDEX_ID, DESCRIPTION)
+        select(identifier, parents, experiment, default_space, SAMPLE_ID, SAMPLE_NAME, SAMPLE_PLATE, SAMPLE_WELL, INDEX_1, INDEX_2, I7_INDEX_ID, I5_INDEX_ID, DESCRIPTION, tags)
 
 FileMakerSamples[is.na(FileMakerSamples)] = ""
 
