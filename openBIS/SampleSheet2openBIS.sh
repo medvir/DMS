@@ -416,4 +416,4 @@ for rundir in "$incomingdir"/1*; do
 done
 
 # copy SampleSheets
-rsync -av --stats --chmod=ug+rwx -p /cygdrive/d/Illumina/MiSeqSampleSheets "timavo:$timavoDST"
+rsync -av --stats --chmod=ug+rwx -p /cygdrive/i/MiSeqSampleSheets "timavo:$timavoDST"
