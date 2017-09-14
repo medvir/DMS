@@ -113,6 +113,20 @@ Sub validate()
     Selection.Offset(1, 0).Select
     Loop
     
+    'Validate Sample_Name
+    Range("B25").Select
+    Do Until ActiveCell.Value = vbNullString
+    
+    If Selection.Validation.Value Then
+        Selection.Interior.ColorIndex = 0
+    Else
+        exceptionCount = exceptionCount + 1
+        Selection.Interior.ColorIndex = 6
+    End If
+    
+    Selection.Offset(1, 0).Select
+    Loop
+    
     'Validate I7_Index_ID
     Range("E25").Select
     Do Until ActiveCell.Value = vbNullString And Selection.Offset(0, -3) = vbNullString
