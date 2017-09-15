@@ -44,12 +44,14 @@ By pressing this button, several tests are performed directly on the MiSeq Sampl
 * RGT Box 1 and 2 start with "RGT", are 10 characters in total and are not the same
 * MS Nr. starts with "MS", ends with "-150V3" and is 15 characters in total
 * Sample_ID is a whole number between 1 and 96
+* Sample_Name doesn't contain space characters
 * I7 and I5_Index_ID is within the I7 and I5_Index_ID list
 * index and index2 is within I7 and I5_Index list
 * Sample_Project is equal to "Resistance"
 * Virus is within Virus list
 * genotype is within Genotyp list
 * target is within Target list
+* viral_load is an integer or empty
 * timavo is equal to "n"
 
 If one or more of those conditions isn't fulfilled, the affected cell in the SampleSheet worksheet (except the MS Nr.) is highlighted yellow.  
@@ -66,6 +68,5 @@ The VBA code can be edited best with Excel for Windows (currently there's no pro
 The Visual Basic environment can be found under the Developer tab. If this tab is not visible visit [this](https://msdn.microsoft.com/en-us/library/bb608625.aspx) site.  
 The code is saved under Modules in SampleSheetTemplateResistance. It contains two Subroutines (begin with `Sub saveascsv()` and `Sub validate()` and end with `End Sub`).
 
-## Todo
-* include validation for viral load (?)
+## Todo (optional)
 * include test for uniqueness of indexprimer combinations

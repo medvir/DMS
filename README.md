@@ -1,5 +1,9 @@
-# openBIS
-Infos and scripts for implementing openBIS at the IMV
+# Data Management System
+
+This repo hosts a collection of connected scripts, programs, templates, and
+documents concerning the data management practices to follow at IMV for HTS
+data (high throughput sequencing data). More info can be found on the
+[Wiki page](https://github.com/medvir/DMS/wiki).
 
 ### Metadata model
 `metadata_model.md`
