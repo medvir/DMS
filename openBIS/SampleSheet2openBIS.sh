@@ -42,9 +42,9 @@ test_molis(){
 write_miseq_run(){
     # input: run_name space
     # space is Diagnostics or Research
-    run_name=$1
+    run_name_here=$1
 
-    datenum=${run_name:0:6}
+    datenum=${run_name_here:0:6}
     YYYY=20${datenum:0:2}
     MM=${datenum:2:2}
     DD=${datenum:4:2}
@@ -67,7 +67,7 @@ write_miseq_run(){
         printf "RGT_Box_2 = %s\n" "$RGT_box2"
     } > "$prop_file"
 
-    dst="${datamoverDST}/${run_name}"
+    dst="${datamoverDST}/${run_name_here}"
     rsync -a --rsync-path="mkdir -p $dst && rsync" "$prop_file" "ozagor@datamover:$dst"
     # save rsync exit status, if 0 then success
     rsync1=$?
@@ -80,7 +80,7 @@ write_miseq_run(){
         printf "SPACE = IMV\n"
         printf "PROJECT = %s\n" "$project_to_write"
         printf "EXPERIMENT = MISEQ_RUNS\n"
-        printf "SAMPLE = %s\n" "$run_name"
+        printf "SAMPLE = %s\n" "$run_name_here"
         printf "SAMPLE_TYPE = MISEQ_RUN\n"
         printf "DATASET_TYPE = DATAMOVER_SAMPLE_CREATOR\n"
     } > "$prop_file"
@@ -88,7 +88,7 @@ write_miseq_run(){
     rsync -a "$prop_file" "ozagor@datamover:$dst"
     rsync2=$?
     if [ "$rsync1" -eq "0" ] && [ "$rsync2" -eq "0" ]; then
-        ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}" </dev/null
+        ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name_here}" </dev/null
     else
         echo -e "WATCH OUT: touching the void! $rsync1 $rsync2"
     fi
@@ -489,7 +489,7 @@ echo 'GO!'
 ### main loop over all dirs in $incomingdir starting with "1"
 #for rundir in $(find $incomingdir -type d -name "1*" -depth 1)
 #for rundir in $(ls $incomingdir)
-for rundir in "$incomingdir"/17081*; do
+for rundir in "$incomingdir"/1*; do
     [[ -d "$rundir" ]] || continue
     echo -e "\033[1;31m================================================================================\033[0m"
     echo "Now syncing:" "$rundir"
