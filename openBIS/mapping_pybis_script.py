@@ -1,4 +1,4 @@
-logging.info#!/usr/bin/env python
+#!/usr/bin/env python
 '''Map samples in openBIS following their unique naming scheme'''
 import os
 import sys
