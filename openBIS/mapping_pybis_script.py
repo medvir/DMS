@@ -149,7 +149,7 @@ if not o.is_session_active():
 
 logging.info('Mapping session starting')
 # map samples in each project
-for project in ['metagenomics', 'resistance', 'antibodies', 'plasmids', 'other']:
+for project in ['resistance', 'metagenomics', 'antibodies', 'plasmids', 'other']:
     general_mapping(project)
 logging.info('Mapping session finished')
 
