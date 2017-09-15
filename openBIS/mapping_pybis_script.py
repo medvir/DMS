@@ -111,28 +111,41 @@ if not o.is_session_active():
     # saves token in ~/.pybis/example.com.token
     o.login('ozagor', password, save_token=True)
 
-# iterate through resistance datasets to run minvar
 
+logging.info('Mapping session starting')
+# map samples in each project
+for project in ['resistance', 'metagenomics', 'antibodies', 'plasmids', 'other']:
+    general_mapping(project)
+logging.info('Mapping session finished')
 
-#general_mapping('metagenomics')
-general_mapping('resistance')
-sys.exit()
+logging.info('Analysis session starting')
+# iterate through resistance samples to run minvar
+res_test_samples = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(tags=['mapped'])
 
-# res_datasets = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(tags=['mapped']).get_datasets()
-res_datasets = o.get_experiment('/IMV/RESISTANCE/MISEQ_SAMPLES').get_samples(tags=['mapped']).get_datasets(type='FASTQ')
-for rd in res_datasets:
-    od = rd.download(destination='/tmp', wait_until_finished=True)
-    for file_path in rd.file_list:
-        # build full path of downloaded files
-        full_path = '/tmp/%s/%s' % (rd.permId, file_path)
-        assert os.path.exists(full_path), full_path
-        if 'fastq' in os.path.basename(file_path) \
-            or 'fq' in os.path.basename(file_path):
-            fastq_path = full_path
-    logging.info('Running minvar on %s', fastq_path)
-    minvar_output = run_minvar(fastq_path)
-    for k, v in minvar_output:
-        fh = open(k, 'w')
+for sample in res_test_samples:
+    virus = sample.props.virus
+    if virus != 'HIV-1':
+        logging.debug('Virus is not HIV')
+        continue
+    if 'analysed' in sample.tags:
+        logging.debug('Sample already analysed')
+        continue
+    logging.info('Found resistance sample: %s', sample.code)
+    parents = sample.get_parents()
+    assert len(parents) == 1
+    parent = parents[0]
+    logging.info('Parent: %s', parent.code)
+    continue
+    try:
+        rd = parent.get_datasets()[0]
+        logging.debug('Datasets found')
+    except ValueError:
+        logging.warning('No datasets')
+        continue
+
+    minvar_files = run_minvar('/IMV/%s' % parent.code)
+    for k, v in minvar_files.items():
+        fh = open(k, 'wb')
         fh.write(v)
         fh.close()
     break
