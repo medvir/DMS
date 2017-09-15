@@ -113,6 +113,11 @@ if not o.is_session_active():
 
 # iterate through resistance datasets to run minvar
 
+
+#general_mapping('metagenomics')
+general_mapping('resistance')
+sys.exit()
+
 # res_datasets = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(tags=['mapped']).get_datasets()
 res_datasets = o.get_experiment('/IMV/RESISTANCE/MISEQ_SAMPLES').get_samples(tags=['mapped']).get_datasets(type='FASTQ')
 for rd in res_datasets:
@@ -131,6 +136,3 @@ for rd in res_datasets:
         fh.write(v)
         fh.close()
     break
-sys.exit()
-general_mapping('metagenomics')
-general_mapping('resistance')
