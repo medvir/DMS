@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+logging.info#!/usr/bin/env python
 '''Map samples in openBIS following their unique naming scheme'''
 import os
 import sys
@@ -10,7 +10,7 @@ import subprocess
 from pybis import Openbis
 
 logging.basicConfig(
-    filename='pybis_script.log', level=logging.DEBUG,
+    filename='pybis_script.log', level=logging.INFO,
     format='%(levelname)s %(asctime)s %(filename)s: %(funcName)s() %(lineno)d: \t%(message)s',
     datefmt='%Y/%m/%d %H:%M:%S')
 
@@ -20,7 +20,7 @@ def general_mapping(project=None):
     For resistance tests, the full relationship is
     MISEQ_RUN -> MISEQ_SAMPLE -> RESISTANCE_TEST
     '''
-    logging.debug('Mapping called for project %s', project)
+    logging.info('Mapping called for project %s', project)
     p_code = project.upper()
     valid_projects = ['RESISTANCE', 'METAGENOMICS', 'PLASMIDS', 'OTHER',
                       'ANTIBODIES']
@@ -28,7 +28,7 @@ def general_mapping(project=None):
         sys.exit('Choose a valid project: %s' % ','.join(valid_projects))
 
     proj = o.get_projects(space='IMV', code=p_code)[0]
-    logging.debug('We are here in project %s', proj.code)
+    logging.info('We are here in project %s', proj.code)
 
     # dict with a list of samples from each experiment in this project
     samples_dict = {}
@@ -59,7 +59,7 @@ def general_mapping(project=None):
             miseq_sample.add_tags('mapped')
             miseq_sample.save()
         else:
-            logging.debug('sample %s already mapped', miseq_sample_id)
+            logging.info('sample %s already mapped', miseq_sample_id)
 
         # for resistance tests there is another relation to create
         if p_code == 'RESISTANCE':
@@ -71,18 +71,18 @@ def general_mapping(project=None):
                 resi_sample.add_tags('mapped')
                 resi_sample.save()
             else:
-                logging.debug('sample %s already mapped', resi_sample_id)
+                logging.info('sample %s already mapped', resi_sample_id)
 
 
 def run_child(cmd):
     '''use subrocess.check_output to run an external program with arguments'''
     import shlex
     cml = shlex.split(cmd)
-    logging.debug('Running instance of %s', cml[0])
+    logging.info('Running instance of %s', cml[0])
     try:
         output = subprocess.check_output(
             cml, universal_newlines=True, stderr=subprocess.STDOUT)
-        logging.debug('Completed')
+        logging.info('Completed')
     except subprocess.CalledProcessError as ee:
         logging.error(
             "Execution of %s failed with returncode %d: %s",
@@ -93,6 +93,8 @@ def run_child(cmd):
 
 
 def run_minvar(fastq_file):
+    '''Run minvar and return a dictionary of output files
+    '''
     files_to_save = ['report.md', 'annotated_DRM.csv']
     with tempfile.TemporaryDirectory() as tmpdirname:
         print('going to temporary directory', tmpdirname)
@@ -114,21 +116,22 @@ if not o.is_session_active():
 
 logging.info('Mapping session starting')
 # map samples in each project
-for project in ['resistance', 'metagenomics', 'antibodies', 'plasmids', 'other']:
-    general_mapping(project)
+for pro in ['resistance', 'metagenomics', 'antibodies', 'plasmids', 'other']:
+    general_mapping(pro)
 logging.info('Mapping session finished')
 
 logging.info('Analysis session starting')
 # iterate through resistance samples to run minvar
-res_test_samples = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(tags=['mapped'])
+res_test_samples = o.get_experiment(
+    '/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(tags=['mapped'])
 
 for sample in res_test_samples:
     virus = sample.props.virus
     if virus != 'HIV-1':
-        logging.debug('Virus is not HIV')
+        logging.info('Virus is not HIV')
         continue
     if 'analysed' in sample.tags:
-        logging.debug('Sample already analysed')
+        logging.info('Sample already analysed')
         continue
     logging.info('Found resistance sample: %s', sample.code)
     parents = sample.get_parents()
@@ -138,7 +141,7 @@ for sample in res_test_samples:
     continue
     try:
         rd = parent.get_datasets()[0]
-        logging.debug('Datasets found')
+        logging.info('Datasets found')
     except ValueError:
         logging.warning('No datasets')
         continue
