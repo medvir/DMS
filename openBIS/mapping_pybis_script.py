@@ -58,8 +58,9 @@ def general_mapping(project=None):
             miseq_sample.add_parents('/IMV/%s' % miseq_run_id)
             miseq_sample.add_tags('mapped')
             miseq_sample.save()
+            logging.info('mapping sample %s', miseq_sample_id)
         else:
-            logging.info('sample %s already mapped', miseq_sample_id)
+            logging.debug('sample %s already mapped', miseq_sample_id)
 
         # for resistance tests there is another relation to create
         if p_code == 'RESISTANCE':
@@ -70,8 +71,9 @@ def general_mapping(project=None):
                 resi_sample.add_parents('/IMV/%s' % miseq_sample_id)
                 resi_sample.add_tags('mapped')
                 resi_sample.save()
+                logging.info('mapping sample %s', resi_sample_id)
             else:
-                logging.info('sample %s already mapped', resi_sample_id)
+                logging.debug('sample %s already mapped', resi_sample_id)
 
 
 def run_child(cmd):
