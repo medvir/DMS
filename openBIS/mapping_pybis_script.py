@@ -1,7 +1,8 @@
-#!/usr/bin/env python
+#!/opt/miniconda/bin/python3
 '''Map samples in openBIS following their unique naming scheme'''
 import os
 import sys
+import shlex
 import getpass
 import logging
 import logging.handlers
@@ -94,16 +95,30 @@ def run_child(cmd):
     return output
 
 
-def run_minvar(fastq_file):
+def run_minvar(ds):
     '''Run minvar and return a dictionary of output files
     '''
+    
     files_to_save = ['report.md', 'annotated_DRM.csv']
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        print('going to temporary directory', tmpdirname)
+    rdir = os.getcwd()
+    #with tempfile.TemporaryDirectory() as tmpdirname:
+    tmpdirname = '/tmp/xyz'
+    if True:
+        print('going to temporary directory', tmpdirname, file=sys.stderr)
+        logging.info('going to temporary directory %s', tmpdirname)
         os.chdir(tmpdirname)
-        run_child('minvar -f %s &> /tmp/minvar.log' % fastq_file)
+        for i, f in enumerate(ds.file_list):
+            if not f.endswith('properties'):
+                fastq_name = f
+        ds.download(destination='.')
+        fastq_file = os.path.join(tmpdirname, ds.permId, fastq_name)
+        assert os.path.exists(fastq_file), ' '.join(os.listdir())
+        cml = shlex.split('minvar -f %s' % fastq_file)
+#        with open('/tmp/minvar.log', 'w') as oh:
+#            subprocess.call(cml, stdout=oh, stderr=subprocess.STDOUT)
         print('minvar finished, copying files')
-        saved_files = {fn: open(fn).readlines() for fn in files_to_save}
+        saved_files = {fn: open(fn, 'rb').readlines() for fn in files_to_save}
+    os.chdir(rdir)
     return saved_files
 
 
@@ -116,11 +131,11 @@ if not o.is_session_active():
     o.login('ozagor', password, save_token=True)
 
 
-logging.info('Mapping session starting')
+#logging.info('Mapping session starting')
 # map samples in each project
-for pro in ['resistance', 'metagenomics', 'antibodies', 'plasmids', 'other']:
-    general_mapping(pro)
-logging.info('Mapping session finished')
+#for pro in ['resistance', 'metagenomics', 'antibodies', 'plasmids', 'other']:
+#    general_mapping(pro)
+#logging.info('Mapping session finished')
 
 logging.info('Analysis session starting')
 # iterate through resistance samples to run minvar
@@ -140,17 +155,18 @@ for sample in res_test_samples:
     assert len(parents) == 1
     parent = parents[0]
     logging.info('Parent: %s', parent.code)
-    continue
     try:
-        rd = parent.get_datasets()[0]
+        rd = parent.get_datasets()
         logging.info('Datasets found')
     except ValueError:
         logging.warning('No datasets')
         continue
-
-    minvar_files = run_minvar('/IMV/%s' % parent.code)
+    ds_code1 = str(rd[0].permId)
+    dataset = o.get_dataset(ds_code1)
+    minvar_files = run_minvar(dataset)
     for k, v in minvar_files.items():
-        fh = open(k, 'wb')
-        fh.write(v)
+        fh = open(k, 'w')
+        for l in v:
+            fh.write(l.decode('utf-8'))
         fh.close()
     break
