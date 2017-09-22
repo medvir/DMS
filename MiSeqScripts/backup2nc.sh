@@ -1,7 +1,7 @@
 #!/bin/bash
 # copy only fastq files, sample sheets and config files
 SRC=/cygdrive/D/Illumina/MiSeqOutput
-SRC2=/cygdrive/d/Illumina/MiSeqSampleSheets
+SRC2=/cygdrive/i/MiSeqSampleSheets
 SRC3=/cygdrive/d/Illumina/MiSeqRunParameters
 DST=virologysrv04.uzh.ch:/data/MiSeq
 

@@ -42,9 +42,9 @@ test_molis(){
 write_miseq_run(){
     # input: run_name space
     # space is Diagnostics or Research
-    run_name=$1
+    run_name_here=$1
 
-    datenum=${run_name:0:6}
+    datenum=${run_name_here:0:6}
     YYYY=20${datenum:0:2}
     MM=${datenum:2:2}
     DD=${datenum:4:2}
@@ -67,7 +67,7 @@ write_miseq_run(){
         printf "RGT_Box_2 = %s\n" "$RGT_box2"
     } > "$prop_file"
 
-    dst="${datamoverDST}/${run_name}"
+    dst="${datamoverDST}/${run_name_here}"
     rsync -a --rsync-path="mkdir -p $dst && rsync" "$prop_file" "ozagor@datamover:$dst"
     # save rsync exit status, if 0 then success
     rsync1=$?
@@ -80,7 +80,7 @@ write_miseq_run(){
         printf "SPACE = IMV\n"
         printf "PROJECT = %s\n" "$project_to_write"
         printf "EXPERIMENT = MISEQ_RUNS\n"
-        printf "SAMPLE = %s\n" "$run_name"
+        printf "SAMPLE = %s\n" "$run_name_here"
         printf "SAMPLE_TYPE = MISEQ_RUN\n"
         printf "DATASET_TYPE = DATAMOVER_SAMPLE_CREATOR\n"
     } > "$prop_file"
@@ -88,12 +88,91 @@ write_miseq_run(){
     rsync -a "$prop_file" "ozagor@datamover:$dst"
     rsync2=$?
     if [ "$rsync1" -eq "0" ] && [ "$rsync2" -eq "0" ]; then
-        ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}" </dev/null
+        ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name_here}" </dev/null
+    else
+        echo -e "WATCH OUT: touching the void! $rsync1 $rsync2"
+    fi
+
+}
+
+
+write_miseq_sample_zero(){
+
+    sample_number=0
+    sample_name='Undetermined'
+    run_name="$(basename $rundir)"
+
+    fastq_file=$incomingdir/$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_R1_001.fastq.gz
+    fastq_file_2=$incomingdir/$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_R2_001.fastq.gz
+
+    echo "Syncing to TIMAVO"
+    DST2="${timavoDST}/MiSeqOutput/${run_name}/Data/Intensities/BaseCalls/"
+    rsync -a --rsync-path="mkdir -p $DST2 && rsync" "$fastq_file" "timavo:$DST2"
+    if [ -e "$fastq_file_2" ]; then
+        rsync "$fastq_file_2" "$DST2"
+    fi
+
+    ### write properties file
+
+    ### sample_type MISEQ_SAMPLE
+    echo "Writing properties files for MISEQ_SAMPLE ID:${sample_number} NAME:${sample_name}"
+    prop_file=sample.properties
+    {
+        printf "SAMPLE_ID=0\n"
+        printf "SAMPLE_NAME=Undetermined\n"
+        printf "SAMPLE_PLATE=\n"
+        printf "SAMPLE_WELL=\n"
+        printf "I7_INDEX_ID=\n"
+        printf "INDEX_1=\n"
+        printf "I5_INDEX_ID=\n"
+        printf "INDEX_2=\n"
+        printf "DESCRIPTION=\n"
+    } > "$prop_file"
+
+    dst="${datamoverDST}/${run_name}-${sample_number}"
+    rsync -a --rsync-path="mkdir -p $dst && rsync" "$prop_file" "ozagor@datamover:$dst"
+    # save rsync exit status, if 0 then success
+    rsync1=$?
+
+    prop_file=dataset.properties
+    {
+        printf "SPACE = IMV\n"
+        printf "PROJECT = METAGENOMICS\n"
+        printf "EXPERIMENT = MISEQ_SAMPLES\n"
+        printf "SAMPLE = %s-%s\n" "${run_name}" "${sample_number}"
+        printf "SAMPLE_TYPE = MISEQ_SAMPLE\n"
+        printf "DATASET_TYPE = FASTQ\n"
+    } > "$prop_file"
+
+    rsync -a "$prop_file" "ozagor@datamover:$dst"
+    rsync2=$?
+
+    rsync3=0
+    if [ -e "$fastq_file" ]; then
+        rsync -a "$fastq_file" "ozagor@datamover:$dst"
+        rsync3=$?
+        # echo "R1 file exists, rsync returns $rsync3"
+    else
+        echo "R1 file does not exist"
+    fi
+
+    rsync4=0
+    if [ -e "$fastq_file_2" ]; then
+        rsync -a "$fastq_file_2" "ozagor@datamover:$dst"
+        rsync4=$?
+        echo "R2 file exists, rsync returns $rsync4"
+    # else
+    #     echo "R2 file does not exist"
+    fi
+
+    if [ "$rsync1" -eq "0" ] && [ "$rsync2" -eq "0" ] && [ "$rsync3" -eq "0" ] && [ "$rsync4" -eq "0" ]; then
+        ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}-${sample_number}" </dev/null
     else
         echo -e "WATCH OUT: touching the void! $rsync1 $rsync2 $rsync3 $rsync4"
     fi
 
 }
+
 
 write_miseq_sample(){
     # input is a line in section [Data] of the samples sheet
@@ -122,7 +201,7 @@ write_miseq_sample(){
     run_name="$(basename $rundir)"
 
     fastq_file=$incomingdir/$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_R1_001.fastq.gz
-    fastq_file_2=$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_R2_001.fastq.gz
+    fastq_file_2=$incomingdir/$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_R2_001.fastq.gz
 
     if [[ $timavo == *"y"* ]]; then
         echo "Syncing to TIMAVO"
@@ -246,7 +325,7 @@ write_resistance_test(){
     if [ "$rsync1" -eq "0" ] && [ "$rsync2" -eq "0" ]; then
         ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}-${sample_number}_RESISTANCE" </dev/null
     else
-        echo -e "WATCH OUT: touching the void! $rsync1 $rsync2 $rsync3 $rsync4"
+        echo -e "WATCH OUT: touching the void! $rsync1 $rsync2"
     fi
 
 }
@@ -268,7 +347,7 @@ process_runs(){
     ### remove spaces in sample sheet
     #sed -e "s/ /_/g" < "$rundir/Data/Intensities/BaseCalls/SampleSheet.csv" > sample_sheet.tmp
     # sample sheets are now created with Stefan's template: no need to remove them anymore
-    cp "$rundir/Data/Intensities/BaseCalls/SampleSheet.csv" sample_sheet.tmp
+    cp "$rundir/SampleSheet.csv" sample_sheet.tmp
     count_openbis=$(grep -c openbis sample_sheet.tmp)
     ### counters for read 1/2 and samples
     r=0
@@ -364,6 +443,8 @@ process_runs(){
         write_miseq_run "${run_name}_ANTIBODIES" Antibodies
     fi
     if [ "$meta_sample" = true ]; then
+        echo "WRITING UNDETERMINED READS"
+        write_miseq_sample_zero
         echo "WRITING METAGENOMICS RUN"
         write_miseq_run "${run_name}_METAGENOMICS" Metagenomics
     fi
@@ -416,4 +497,4 @@ for rundir in "$incomingdir"/1*; do
 done
 
 # copy SampleSheets
-rsync -av --stats --chmod=ug+rwx -p /cygdrive/d/Illumina/MiSeqSampleSheets "timavo:$timavoDST"
+rsync -av --stats --chmod=ug+rwx -p /cygdrive/i/MiSeqSampleSheets "timavo:$timavoDST"
