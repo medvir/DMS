@@ -208,7 +208,7 @@ write_miseq_sample(){
         DST2="${timavoDST}/MiSeqOutput/${run_name}/Data/Intensities/BaseCalls/"
         rsync -a --rsync-path="mkdir -p $DST2 && rsync" "$fastq_file" "timavo:$DST2"
         if [ -e "$fastq_file_2" ]; then
-            rsync "$fastq_file_2" "$DST2"
+            rsync "$fastq_file_2" "timavo:$DST2"
         fi
       else
         echo "Not syncing to TIMAVO"
