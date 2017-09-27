@@ -16,7 +16,7 @@ FileMakerSamplesFile = paste0(path, "FileMakerSamples.csv")
 
 ```
 
-# FileMaker Runs
+# FileMaker MISEQ_RUNS
 ```{r, echo=FALSE, message=FALSE}
 FileMakerRuns = read_csv(FileMakerRunsFile, col_names = FALSE) %>%
         rename(DATE = X1,
@@ -73,6 +73,7 @@ FileMakerRuns[is.na(FileMakerRuns)] = ""
 
 FileMakerRuns
 ```
+
 ### Write MISEQ_RUN upload file
 ```{r, echo=FALSE, message=FALSE}
 FileMakerRuns %>%   
@@ -80,7 +81,7 @@ FileMakerRuns %>%
         write_tsv(., paste0(path, "SAMPLE_MISEQ-RUN.tsv"))
 ```
 
-# FileMaker Samples
+# FileMaker MISEQ_SAMPLES
 ```{r, echo=FALSE, message=FALSE}
 FileMakerSamples = read_csv(FileMakerSamplesFile, col_names = FALSE) %>%
         rename(RUN_NAME = X1,
@@ -133,7 +134,7 @@ FileMakerSamples %>%
         write_tsv(., paste0(path, "SAMPLE_MISEQ-SAMPLE.tsv"))
 ```
 
-### Create RESISTANCE_TEST samples for each MISEQ_SAMPLE in Project RESISTANCE
+## RESISTANCE_TEST samples for each MISEQ_SAMPLE in Project RESISTANCE
 ```{r, echo=FALSE, message=FALSE}
 FileMakerResistanceTests = FileMakerSamples %>%
         filter(experiment == "/IMV/RESISTANCE/MISEQ_SAMPLES") %>%
