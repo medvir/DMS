@@ -44,7 +44,7 @@ By pressing this button, several tests are performed directly on the MiSeq Sampl
 * RGT Box 1 and 2 start with "RGT", are 10 characters in total and are not the same
 * MS Nr. starts with "MS", ends with "-150V3" and is 15 characters in total
 * Sample_ID is a whole number between 1 and 96
-* Sample_Name doesn't contain space characters
+* Sample_Name only contains numbers (0-9), letters (a-z, A-Z) or dashes (-)
 * I7 and I5_Index_ID is within the I7 and I5_Index_ID list
 * index and index2 is within I7 and I5_Index list
 * Sample_Project is equal to "Resistance"
