@@ -200,12 +200,15 @@ Sub validate()
     'Validate virus
     Range("K25").Select
     Do Until ActiveCell.Value = vbNullString And Selection.Offset(0, -9) = vbNullString
-    
-    If Selection.Validation.Value Then
-        Selection.Interior.ColorIndex = 0
+    If Selection.Offset(0, -2) = "Resistance" Then
+        If Selection.Validation.Value Then
+            Selection.Interior.ColorIndex = 0
+        Else
+            exceptionCount = exceptionCount + 1
+            Selection.Interior.ColorIndex = 6
+        End If
     Else
-        exceptionCount = exceptionCount + 1
-        Selection.Interior.ColorIndex = 6
+        Selection.Interior.ColorIndex = 0
     End If
     
     Selection.Offset(1, 0).Select
@@ -215,11 +218,15 @@ Sub validate()
     Range("L25").Select
     Do Until ActiveCell.Value = vbNullString And Selection.Offset(0, -10) = vbNullString
     
-    If Selection.Validation.Value Then
-        Selection.Interior.ColorIndex = 0
+    If Selection.Offset(0, -3) = "Resistance" Then
+        If Selection.Validation.Value Then
+            Selection.Interior.ColorIndex = 0
+        Else
+            exceptionCount = exceptionCount + 1
+            Selection.Interior.ColorIndex = 6
+        End If
     Else
-        exceptionCount = exceptionCount + 1
-        Selection.Interior.ColorIndex = 6
+        Selection.Interior.ColorIndex = 0
     End If
     
     Selection.Offset(1, 0).Select
@@ -229,11 +236,15 @@ Sub validate()
     Range("M25").Select
     Do Until ActiveCell.Value = vbNullString And Selection.Offset(0, -11) = vbNullString
     
-    If Selection.Validation.Value Then
-        Selection.Interior.ColorIndex = 0
+    If Selection.Offset(0, -4) = "Resistance" Then
+        If Selection.Validation.Value Then
+            Selection.Interior.ColorIndex = 0
+        Else
+            exceptionCount = exceptionCount + 1
+            Selection.Interior.ColorIndex = 6
+        End If
     Else
-        exceptionCount = exceptionCount + 1
-        Selection.Interior.ColorIndex = 6
+        Selection.Interior.ColorIndex = 0
     End If
     
     Selection.Offset(1, 0).Select
