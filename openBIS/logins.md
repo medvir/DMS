@@ -7,9 +7,9 @@
 - [x] Kufner Verena vkufne
 - [x] Stefan Schmutz stschmu
 - [x] Merle Schanz merles
-- [ ] Böni Jürg jboeni
-- [ ] Zbinden Andrea azbind
-- [ ] Capaul Riccarda
-- [ ] Leiber Selina
-- [ ] Ziltener Gabriela
-- [ ] Shah Cyril
+- [x] Böni Jürg jboeni
+- [x] Zbinden Andrea azbind
+- [x] Capaul Riccarda rrisch
+- [x] Leiber Selina seleib
+- [x] Ziltener Gabriela gazilt
+- [x] Shah Cyril cshah
