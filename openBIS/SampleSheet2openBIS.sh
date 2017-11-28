@@ -289,6 +289,7 @@ write_resistance_test(){
     genotype=${sample_line[11]}
     target=${sample_line[12]}
     viral_load=${sample_line[13]}
+    apl=${sample_line[15]}
 
     run_name=$(basename "$rundir")
 
@@ -302,6 +303,7 @@ write_resistance_test(){
         printf "TARGET_REGION=%s\n" "$target"
         printf "GENOTYPE=%s\n" "$genotype"
         printf "VIRAL_LOAD=%s\n" "$viral_load"
+        printf "APL=%s\n" "$apl"
     } > "$prop_file"
 
     dst="${datamoverDST}/${run_name}-${sample_number}_RESISTANCE"
