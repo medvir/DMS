@@ -61,6 +61,7 @@ Here below are listed sample types, together with their needed properties
 
 - **Sample Type `RESISTANCE_TEST`**: child of `MISEQ_SAMPLE`
   - Sample_Name
+  - APL (Arbeitsplatzliste)
   - Virus
   - Target
   - Genotype
