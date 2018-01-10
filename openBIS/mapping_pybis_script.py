@@ -111,7 +111,7 @@ def run_minvar(ds):
     """Run minvar and return a dictionary of output files."""
     rdir = os.getcwd()
     with tempfile.TemporaryDirectory() as tmpdirname:
-        logging.info('going to temporary directory %s', tmpdirname)
+        logging.info('running minvar in %s', tmpdirname)
         os.chdir(tmpdirname)
         for f in list(ds.file_list):
             if not f.endswith('properties'):
@@ -122,7 +122,7 @@ def run_minvar(ds):
         cml = shlex.split('minvar -f %s' % fastq_file)
         with open('/tmp/minvar.err', 'w') as oh:
             subprocess.call(cml, stdout=oh, stderr=subprocess.STDOUT)
-        print('minvar finished, copying files')
+        logging.info('minvar finished, copying files')
         saved_files = {fn: open(fn, 'rb').read() for fn in files_to_save}
     os.chdir(rdir)
     return saved_files
@@ -137,21 +137,20 @@ if not o.is_session_active():
     o.login('ozagor', password, save_token=True)
 
 logging.info('Mapping session starting')
-# map samples in each project
 for pro in ['resistance', 'metagenomics', 'antibodies', 'plasmids', 'other']:
     general_mapping(pro)
 logging.info('Mapping session finished')
 
 logging.info('Analysis session starting')
 # iterate through resistance samples to run minvar
-# res_test_samples = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(tags=['mapped'])
-res_test_samples = [o.get_sample('/IMV/170623_M02081_0218_000000000-B4CPG-3_RESISTANCE')]
+res_test_samples = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(tags=['mapped'])
+# res_test_samples = [o.get_sample('/IMV/170623_M02081_0218_000000000-B4CPG-3_RESISTANCE')]
 logging.info('Found %d samples', len(res_test_samples))
 
 for sample in res_test_samples:
     virus = sample.props.virus
     if 'analysed' in sample.tags:
-        logging.info('Sample already analysed')
+        logging.debug('Sample already analysed')
         continue
     parents = sample.get_parents()
     assert len(parents) == 1
@@ -162,7 +161,6 @@ for sample in res_test_samples:
     except ValueError:
         logging.warning('No datasets')
         continue
-
     ds_code1 = str(rd[0].permId)
     dataset = o.get_dataset(ds_code1)
     minvar_files = run_minvar(dataset)
@@ -173,7 +171,7 @@ for sample in res_test_samples:
         sample.add_attachment(filename)
     sample.add_tags('analysed')
     sample.save()
-    break
+
 
 for filename in files_to_save:
     try:
