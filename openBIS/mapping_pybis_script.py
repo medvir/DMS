@@ -126,8 +126,12 @@ def run_minvar(ds):
         cml = shlex.split('minvar -f %s' % fastq_file)
         with open('/tmp/minvar.err', 'w') as oh:
             subprocess.call(cml, stdout=oh, stderr=subprocess.STDOUT)
-        logging.info('minvar finished, copying files')
-        saved_files = {fn: open(fn, 'rb').read() for fn in files_to_save}
+        try:
+            logging.info('minvar finished, copying files')
+            saved_files = {fn: open(fn, 'rb').read() for fn in files_to_save}
+        except FileNotFoundError:
+            logging.warning('minvar finished with an error, saving minvar.err')
+            saved_files = {'minvar.err': open('/tmp/minvar.err', 'rb').read()}
     os.chdir(rdir)
     return saved_files
 
@@ -152,6 +156,7 @@ res_test_samples = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samp
 logging.info('Found %d samples', len(res_test_samples))
 
 c = 0
+files_to_delete = []
 for sample in res_test_samples:
     virus = sample.props.virus
     sample_name = sample.props.sample_name
@@ -181,6 +186,7 @@ for sample in res_test_samples:
         else:
             upload_name = filename
         sample.add_attachment(upload_name)
+        files_to_delete.append(upload_name)
     sample.add_tags('analysed')
     sample.save()
 
@@ -188,8 +194,7 @@ for sample in res_test_samples:
     if c == 20:
         break
 
-
-for filename in files_to_save:
+for filename in set(files_to_delete):
     try:
         os.remove(filename)
     except FileNotFoundError:
