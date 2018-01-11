@@ -149,6 +149,7 @@ logging.info('Found %d samples', len(res_test_samples))
 
 for sample in res_test_samples:
     virus = sample.props.virus
+    sample_name = sample.props.sample_name
     if 'analysed' in sample.tags:
         logging.debug('Sample already analysed')
         continue
@@ -168,7 +169,13 @@ for sample in res_test_samples:
         fh = open(filename, 'wb')
         fh.write(v)
         fh.close()
-        sample.add_attachment(filename)
+        # add molis number into filename
+        if filename == 'report.pdf':
+            upload_name = 'report_%s.pdf' % sample_name
+            os.rename(filename, upload_name)
+        else:
+            upload_name = filename
+        sample.add_attachment(upload_name)
     sample.add_tags('analysed')
     sample.save()
 
