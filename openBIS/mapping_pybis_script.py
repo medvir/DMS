@@ -117,7 +117,10 @@ def run_minvar(ds):
             if not f.endswith('properties'):
                 fastq_name = f
         ds.download(destination='.')
-        fastq_file = os.path.join(tmpdirname, ds.permId, fastq_name)
+        try:
+            fastq_file = os.path.join(tmpdirname, ds.permId, fastq_name)
+        except UnboundLocalError:  # sometimes fastq files are not present
+            return {}
         assert os.path.exists(fastq_file), ' '.join(os.listdir())
         cml = shlex.split('minvar -f %s' % fastq_file)
         with open('/tmp/minvar.err', 'w') as oh:
@@ -144,7 +147,7 @@ logging.info('Mapping session finished')
 logging.info('Analysis session starting')
 # iterate through resistance samples to run minvar
 res_test_samples = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(tags=['mapped'])
-# res_test_samples = [o.get_sample('/IMV/170623_M02081_0218_000000000-B4CPG-3_RESISTANCE')]
+# res_test_samples = [o.get_sample('/IMV/170803_M02081_0226_000000000-BCJY4-1_RESISTANCE')]
 logging.info('Found %d samples', len(res_test_samples))
 
 c = 0
