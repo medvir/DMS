@@ -147,6 +147,7 @@ res_test_samples = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samp
 # res_test_samples = [o.get_sample('/IMV/170623_M02081_0218_000000000-B4CPG-3_RESISTANCE')]
 logging.info('Found %d samples', len(res_test_samples))
 
+c = 0
 for sample in res_test_samples:
     virus = sample.props.virus
     sample_name = sample.props.sample_name
@@ -178,6 +179,10 @@ for sample in res_test_samples:
         sample.add_attachment(upload_name)
     sample.add_tags('analysed')
     sample.save()
+
+    c += 1
+    if c == 20:
+        break
 
 
 for filename in files_to_save:
