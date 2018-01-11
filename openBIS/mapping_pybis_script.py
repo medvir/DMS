@@ -16,7 +16,7 @@ logging.basicConfig(
     format='%(levelname)s %(asctime)s %(filename)s: %(funcName)s() %(lineno)d: \t%(message)s',
     datefmt='%Y/%m/%d %H:%M:%S')
 
-files_to_save = ['report.md', 'report.pdf', 'merged_muts_drm_annotated.csv', 'minvar.log']
+files_to_save = ['report.md', 'report.pdf', 'merged_muts_drm_annotated.csv', 'minvar.log', 'cns_max_freq.fasta']
 
 
 def general_mapping(project=None):
@@ -120,6 +120,7 @@ def run_minvar(ds):
         try:
             fastq_file = os.path.join(tmpdirname, ds.permId, fastq_name)
         except UnboundLocalError:  # sometimes fastq files are not present
+            os.chdir(rdir)
             return {}
         assert os.path.exists(fastq_file), ' '.join(os.listdir())
         cml = shlex.split('minvar -f %s' % fastq_file)
@@ -139,10 +140,10 @@ if not o.is_session_active():
     # saves token in ~/.pybis/example.com.token
     o.login('ozagor', password, save_token=True)
 
-logging.info('Mapping session starting')
-for pro in ['resistance', 'metagenomics', 'antibodies', 'plasmids', 'other']:
-    general_mapping(pro)
-logging.info('Mapping session finished')
+#logging.info('Mapping session starting')
+#for pro in ['resistance', 'metagenomics', 'antibodies', 'plasmids', 'other']:
+#    general_mapping(pro)
+#logging.info('Mapping session finished')
 
 logging.info('Analysis session starting')
 # iterate through resistance samples to run minvar
