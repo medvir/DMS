@@ -46,8 +46,8 @@ virus: *free text (can be left blank)*
 genotype: *free text (can be left blank)*  
 target: *free text (can be left blank)*  
 viral_load: *free text (can be left blank)*  
-timavo: *"y" or "n" if you want it to be uploaded to timavo*
-apl: *free text (can be left blank)*  
+timavo: *"y" or "n" if you want it to be uploaded to timavo*  
+apl: *free text (can be left blank)*
 
 ### Defined Lists
 All the predefined lists are located here. If a list needs to be changed, it can be done as follows:
