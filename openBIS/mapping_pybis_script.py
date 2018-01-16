@@ -144,10 +144,10 @@ if not o.is_session_active():
     # saves token in ~/.pybis/example.com.token
     o.login('ozagor', password, save_token=True)
 
-#logging.info('Mapping session starting')
-#for pro in ['resistance', 'metagenomics', 'antibodies', 'plasmids', 'other']:
-#    general_mapping(pro)
-#logging.info('Mapping session finished')
+logging.info('Mapping session starting')
+for pro in ['resistance', 'metagenomics', 'antibodies', 'plasmids', 'other']:
+    general_mapping(pro)
+logging.info('Mapping session finished')
 
 logging.info('Analysis session starting')
 # iterate through resistance samples to run minvar
@@ -171,6 +171,8 @@ for sample in res_test_samples:
         logging.info('Datasets found. Sample: %s - virus: %s', sample.code, virus)
     except ValueError:
         logging.warning('No datasets')
+        sample.add_tags('analysed')
+        sample.save()
         continue
     ds_code1 = str(rd[0].permId)
     dataset = o.get_dataset(ds_code1)
