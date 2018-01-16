@@ -42,17 +42,18 @@ def general_mapping(project=None):
     samples_dict = {}
     for xp_name in exp_names:
         logging.info('Saving samples in experiment %s', xp_name)
-
         xp_full_name = '/IMV/%s/%s' % (p_code, xp_name)
-        all_codes = set([smp.code for smp in o.get_experiment(xp_full_name).get_samples()])
+        samples = o.get_experiment(xp_full_name).get_samples()
+        all_codes = set(samples.df['identifier'])
         try:
-            mapped_codes = set([smp.code for smp in o.get_experiment(xp_full_name).get_samples(tags=['mapped'])])
+            mapped_samples = o.get_experiment(xp_full_name).get_samples(tags=['mapped'])
+            mapped_codes = set(mapped_samples.df['identifier'])
         except ValueError:
             mapped_codes = set()
         unmapped_codes = all_codes - mapped_codes
         samples_dict[xp_name] = unmapped_codes
 
-    logging.info('Found %d MISEQ samples, start mapping', len(samples_dict['MISEQ_SAMPLES']))
+    logging.info('Found %d unmapped MISEQ samples', len(samples_dict['MISEQ_SAMPLES']))
 
     for miseq_sample_id in samples_dict['MISEQ_SAMPLES']:
         # e.g.
@@ -144,24 +145,31 @@ if not o.is_session_active():
     # saves token in ~/.pybis/example.com.token
     o.login('ozagor', password, save_token=True)
 
-logging.info('Mapping session starting')
+logging.info('-----------Mapping session starting------------')
 for pro in ['resistance', 'metagenomics', 'antibodies', 'plasmids', 'other']:
     general_mapping(pro)
-logging.info('Mapping session finished')
-
-logging.info('Analysis session starting')
-# iterate through resistance samples to run minvar
-res_test_samples = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(tags=['mapped'])
+logging.info('-----------Mapping session finished------------')
+logging.info('* * * * * * * * * * * * * * * * * * * * * * * *')
+logging.info('-----------Analysis session starting-----------')
+# Fetch resistance samples where minvar must be run
+res_test_mapped = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(tags=['mapped'])
+rtm = set(res_test_mapped.df['identifier'])
+res_test_analysed = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(tags=['analysed'])
+rta = set(res_test_analysed.df['identifier'])
 # res_test_samples = [o.get_sample('/IMV/170803_M02081_0226_000000000-BCJY4-1_RESISTANCE')]
-logging.info('Found %d samples', len(res_test_samples))
+logging.info('Found %d mapped samples', len(rtm))
+logging.info('Found %d analysed samples', len(rta))
+samples_to_analyse = rtm - rta
+logging.info('Analysis will proceed on %d samples', len(samples_to_analyse))
 
 c = 0
 files_to_delete = []
-for sample in res_test_samples:
+for sample_id in samples_to_analyse:
+    sample = o.get_sample(sample_id)
     virus = sample.props.virus
     sample_name = sample.props.sample_name
     if 'analysed' in sample.tags:
-        logging.debug('Sample already analysed')
+        logging.warning('Sample already analysed: should not be here!')
         continue
     parents = sample.get_parents()
     assert len(parents) == 1
@@ -201,3 +209,4 @@ for filename in set(files_to_delete):
         os.remove(filename)
     except FileNotFoundError:
         continue
+logging.info('-----------Analysis session finished-----------')
