@@ -1,0 +1,4 @@
+.gitattributes text eol=lf
+# Default behaviour for scripts is LF
+*.sh text eol=lf
+*.py text eol=lf

@@ -1,13 +1,14 @@
-#!/opt/miniconda/bin/python3
-'''Map samples in openBIS following their unique naming scheme'''
-import os
-import sys
-import shlex
+#!/usr/bin/env python3
+"""Map samples in openBIS following their unique naming scheme."""
 import getpass
 import logging
 import logging.handlers
-import tempfile
+import os
+import shlex
 import subprocess
+import sys
+import tempfile
+
 from pybis import Openbis
 
 logging.basicConfig(
@@ -15,28 +16,43 @@ logging.basicConfig(
     format='%(levelname)s %(asctime)s %(filename)s: %(funcName)s() %(lineno)d: \t%(message)s',
     datefmt='%Y/%m/%d %H:%M:%S')
 
+files_to_save = ['report.md', 'report.pdf', 'merged_muts_drm_annotated.csv', 'minvar.log']
+
+
 def general_mapping(project=None):
-    '''Create parent-child relationships in a project, like
+    """Create parent-child relationships in a project.
+
     MISEQ_RUN -> MISEQ_SAMPLE (where -> means "parent of")
     For resistance tests, the full relationship is
     MISEQ_RUN -> MISEQ_SAMPLE -> RESISTANCE_TEST
-    '''
+    """
     logging.info('Mapping called for project %s', project)
     p_code = project.upper()
-    valid_projects = ['RESISTANCE', 'METAGENOMICS', 'PLASMIDS', 'OTHER',
-                      'ANTIBODIES']
+    valid_projects = ['RESISTANCE', 'METAGENOMICS', 'PLASMIDS', 'OTHER', 'ANTIBODIES']
     if p_code not in valid_projects:
         sys.exit('Choose a valid project: %s' % ','.join(valid_projects))
 
-    proj = o.get_projects(space='IMV', code=p_code)[0]
-    logging.info('We are here in project %s', proj.code)
+    logging.info('We are here in project %s', p_code)
+    # define experiments list
+    exp_names = ['MISEQ_RUNS', 'MISEQ_SAMPLES']
+    if p_code == 'RESISTANCE':
+        exp_names.append('RESISTANCE_TESTS')
 
     # dict with a list of samples from each experiment in this project
     samples_dict = {}
-    for xp in proj.get_experiments():
-        xp_name = str(xp.type)
-        codes_here = [smp.code for smp in xp.get_samples()]
-        samples_dict[xp_name] = codes_here
+    for xp_name in exp_names:
+        logging.info('Saving samples in experiment %s', xp_name)
+
+        xp_full_name = '/IMV/%s/%s' % (p_code, xp_name)
+        all_codes = set([smp.code for smp in o.get_experiment(xp_full_name).get_samples()])
+        try:
+            mapped_codes = set([smp.code for smp in o.get_experiment(xp_full_name).get_samples(tags=['mapped'])])
+        except ValueError:
+            mapped_codes = set()
+        unmapped_codes = all_codes - mapped_codes
+        samples_dict[xp_name] = unmapped_codes
+
+    logging.info('Found %d MISEQ samples, start mapping', len(samples_dict['MISEQ_SAMPLES']))
 
     for miseq_sample_id in samples_dict['MISEQ_SAMPLES']:
         # e.g.
@@ -48,20 +64,17 @@ def general_mapping(project=None):
 
         # extract samples with get_sample (we are using unique identifiers)
         miseq_sample = o.get_sample('/IMV/%s' % miseq_sample_id)
-
+        assert 'mapped' not in miseq_sample.tags
         # run_sample can be extracted here, but we are using the 'mapped'
         # tag only when samples are given a parent, and run_sample
         # only has children
         # run_sample = o.get_sample('/IMV/%s' % miseq_run_id)
 
         # create the run -> sample link
-        if 'mapped' not in miseq_sample.tags:
-            miseq_sample.add_parents('/IMV/%s' % miseq_run_id)
-            miseq_sample.add_tags('mapped')
-            miseq_sample.save()
-            logging.info('mapping sample %s', miseq_sample_id)
-        else:
-            logging.debug('sample %s already mapped', miseq_sample_id)
+        logging.info('mapping sample %s', miseq_sample_id)
+        miseq_sample.add_parents('/IMV/%s' % miseq_run_id)
+        miseq_sample.add_tags('mapped')
+        miseq_sample.save()
 
         # for resistance tests there is another relation to create
         if p_code == 'RESISTANCE':
@@ -74,12 +87,11 @@ def general_mapping(project=None):
                 resi_sample.save()
                 logging.info('mapping sample %s', resi_sample_id)
             else:
-                logging.debug('sample %s already mapped', resi_sample_id)
+                logging.warning('sample %s already mapped', resi_sample_id)
 
 
 def run_child(cmd):
-    '''use subrocess.check_output to run an external program with arguments'''
-    import shlex
+    """Use subrocess.check_output to run an external program with arguments."""
     cml = shlex.split(cmd)
     logging.info('Running instance of %s', cml[0])
     try:
@@ -96,28 +108,29 @@ def run_child(cmd):
 
 
 def run_minvar(ds):
-    '''Run minvar and return a dictionary of output files
-    '''
-    
-    files_to_save = ['report.md', 'annotated_DRM.csv']
+    """Run minvar and return a dictionary of output files."""
     rdir = os.getcwd()
-    #with tempfile.TemporaryDirectory() as tmpdirname:
-    tmpdirname = '/tmp/xyz'
-    if True:
-        print('going to temporary directory', tmpdirname, file=sys.stderr)
-        logging.info('going to temporary directory %s', tmpdirname)
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        logging.info('running minvar in %s', tmpdirname)
         os.chdir(tmpdirname)
-        for i, f in enumerate(ds.file_list):
+        for f in list(ds.file_list):
             if not f.endswith('properties'):
                 fastq_name = f
         ds.download(destination='.')
-        fastq_file = os.path.join(tmpdirname, ds.permId, fastq_name)
+        try:
+            fastq_file = os.path.join(tmpdirname, ds.permId, fastq_name)
+        except UnboundLocalError:  # sometimes fastq files are not present
+            return {}
         assert os.path.exists(fastq_file), ' '.join(os.listdir())
         cml = shlex.split('minvar -f %s' % fastq_file)
-#        with open('/tmp/minvar.log', 'w') as oh:
-#            subprocess.call(cml, stdout=oh, stderr=subprocess.STDOUT)
-        print('minvar finished, copying files')
-        saved_files = {fn: open(fn, 'rb').readlines() for fn in files_to_save}
+        with open('/tmp/minvar.err', 'w') as oh:
+            subprocess.call(cml, stdout=oh, stderr=subprocess.STDOUT)
+        try:
+            logging.info('minvar finished, copying files')
+            saved_files = {fn: open(fn, 'rb').read() for fn in files_to_save}
+        except FileNotFoundError:
+            logging.warning('minvar finished with an error, saving minvar.err')
+            saved_files = {'minvar.err': open('/tmp/minvar.err', 'rb').read()}
     os.chdir(rdir)
     return saved_files
 
@@ -130,43 +143,58 @@ if not o.is_session_active():
     # saves token in ~/.pybis/example.com.token
     o.login('ozagor', password, save_token=True)
 
-
-#logging.info('Mapping session starting')
-# map samples in each project
-#for pro in ['resistance', 'metagenomics', 'antibodies', 'plasmids', 'other']:
-#    general_mapping(pro)
-#logging.info('Mapping session finished')
+logging.info('Mapping session starting')
+for pro in ['resistance', 'metagenomics', 'antibodies', 'plasmids', 'other']:
+    general_mapping(pro)
+logging.info('Mapping session finished')
 
 logging.info('Analysis session starting')
 # iterate through resistance samples to run minvar
-res_test_samples = o.get_experiment(
-    '/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(tags=['mapped'])
+res_test_samples = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(tags=['mapped'])
+# res_test_samples = [o.get_sample('/IMV/170803_M02081_0226_000000000-BCJY4-1_RESISTANCE')]
+logging.info('Found %d samples', len(res_test_samples))
 
+c = 0
+files_to_delete = []
 for sample in res_test_samples:
     virus = sample.props.virus
-    if virus != 'HIV-1':
-        logging.info('Virus is not HIV')
-        continue
+    sample_name = sample.props.sample_name
     if 'analysed' in sample.tags:
-        logging.info('Sample already analysed')
+        logging.debug('Sample already analysed')
         continue
-    logging.info('Found resistance sample: %s', sample.code)
     parents = sample.get_parents()
     assert len(parents) == 1
     parent = parents[0]
-    logging.info('Parent: %s', parent.code)
     try:
         rd = parent.get_datasets()
-        logging.info('Datasets found')
+        logging.info('Datasets found. Sample: %s - virus: %s', sample.code, virus)
     except ValueError:
         logging.warning('No datasets')
         continue
     ds_code1 = str(rd[0].permId)
     dataset = o.get_dataset(ds_code1)
     minvar_files = run_minvar(dataset)
-    for k, v in minvar_files.items():
-        fh = open(k, 'w')
-        for l in v:
-            fh.write(l.decode('utf-8'))
+    for filename, v in minvar_files.items():
+        fh = open(filename, 'wb')
+        fh.write(v)
         fh.close()
-    break
+        # add molis number into filename
+        if filename == 'report.pdf':
+            upload_name = 'report_%s.pdf' % sample_name
+            os.rename(filename, upload_name)
+        else:
+            upload_name = filename
+        sample.add_attachment(upload_name)
+        files_to_delete.append(upload_name)
+    sample.add_tags('analysed')
+    sample.save()
+
+    c += 1
+    if c == 20:
+        break
+
+for filename in set(files_to_delete):
+    try:
+        os.remove(filename)
+    except FileNotFoundError:
+        continue
