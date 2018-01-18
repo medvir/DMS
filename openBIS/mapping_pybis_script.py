@@ -16,7 +16,7 @@ logging.basicConfig(
     format='%(levelname)s %(asctime)s %(filename)s: %(funcName)s() %(lineno)d: \t%(message)s',
     datefmt='%Y/%m/%d %H:%M:%S')
 
-files_to_save = ['report.md', 'report.pdf', 'merged_muts_drm_annotated.csv', 'minvar.log', 'cns_max_freq.fasta']
+files_to_save = ['report.md', 'report.pdf', 'merged_muts_drm_annotated.csv', 'minvar.log', 'cns_max_freq.fasta', 'merged_mutations_nt.csv']
 
 
 def general_mapping(project=None):
