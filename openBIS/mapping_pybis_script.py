@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Map samples in openBIS following their unique naming scheme."""
-import getpass
+import configparser
 import logging
 import logging.handlers
 import os
@@ -16,7 +16,8 @@ logging.basicConfig(
     format='%(levelname)s %(asctime)s %(filename)s: %(funcName)s() %(lineno)d: \t%(message)s',
     datefmt='%Y/%m/%d %H:%M:%S')
 
-files_to_save = ['report.md', 'report.pdf', 'merged_muts_drm_annotated.csv', 'minvar.log', 'cns_max_freq.fasta', 'merged_mutations_nt.csv']
+files_to_save = ['report.md', 'report.pdf', 'merged_muts_drm_annotated.csv', 'minvar.log', 'cns_max_freq.fasta',
+                 'merged_mutations_nt.csv']
 
 
 def general_mapping(project=None):
@@ -138,12 +139,15 @@ def run_minvar(ds):
 
 
 # open the session first
+
 o = Openbis('https://s3itdata.uzh.ch', verify_certificates=True)
 if not o.is_session_active():
     o = Openbis('https://s3itdata.uzh.ch', verify_certificates=False)
-    password = getpass.getpass()
-    # saves token in ~/.pybis/example.com.token
-    o.login('ozagor', password, save_token=True)
+    config = configparser.ConfigParser()
+    config.read(os.path.expanduser('~/.pybis/cred.ini'))
+    username = config['credentials']['username']
+    password = config['credentials']['password']
+    o.login(username, password, save_token=True)
 
 logging.info('-----------Mapping session starting------------')
 for pro in ['resistance', 'metagenomics', 'antibodies', 'plasmids', 'other']:
@@ -210,3 +214,4 @@ for filename in set(files_to_delete):
     except FileNotFoundError:
         continue
 logging.info('-----------Analysis session finished-----------')
+o.logout()
