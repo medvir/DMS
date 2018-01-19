@@ -65,7 +65,7 @@ def general_mapping(project=None):
         assert miseq_run_id in samples_dict['MISEQ_RUNS'], miseq_run_id
 
         # extract samples with get_sample (we are using unique identifiers)
-        miseq_sample = o.get_sample('/IMV/%s' % miseq_sample_id)
+        miseq_sample = o.get_sample(miseq_sample_id)
         assert 'mapped' not in miseq_sample.tags
         # run_sample can be extracted here, but we are using the 'mapped'
         # tag only when samples are given a parent, and run_sample
@@ -74,17 +74,17 @@ def general_mapping(project=None):
 
         # create the run -> sample link
         logging.info('mapping sample %s', miseq_sample_id)
-        miseq_sample.add_parents('/IMV/%s' % miseq_run_id)
+        miseq_sample.add_parents(miseq_run_id)
         miseq_sample.add_tags('mapped')
         miseq_sample.save()
 
         # for resistance tests there is another relation to create
         if p_code == 'RESISTANCE':
             resi_sample_id = '%s_RESISTANCE' % miseq_sample_id
-            resi_sample = o.get_sample('/IMV/%s' % resi_sample_id)
+            resi_sample = o.get_sample(resi_sample_id)
 
             if 'mapped' not in resi_sample.tags:
-                resi_sample.add_parents('/IMV/%s' % miseq_sample_id)
+                resi_sample.add_parents(miseq_sample_id)
                 resi_sample.add_tags('mapped')
                 resi_sample.save()
                 logging.info('mapping sample %s', resi_sample_id)
