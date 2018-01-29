@@ -35,47 +35,57 @@ def general_mapping(project=None):
 
     logging.info('We are here in project %s', p_code)
     # define experiments list
-    exp_names = ['MISEQ_RUNS', 'MISEQ_SAMPLES']
+    type_names = ['MISEQ_RUN', 'MISEQ_SAMPLE']
     if p_code == 'RESISTANCE':
-        exp_names.append('RESISTANCE_TESTS')
+        type_names.append('RESISTANCE_TEST')
 
     # dict with a list of samples from each experiment in this project
     samples_dict = {}
-    for xp_name in exp_names:
-        logging.info('Saving samples in experiment %s', xp_name)
-        xp_full_name = '/IMV/%s/%s' % (p_code, xp_name)
-        samples = o.get_experiment(xp_full_name).get_samples()
-        all_codes = set(samples.df['identifier'])
+    for type_name in type_names:
+        logging.debug('Saving samples in experiment %s', type_name)
+        # xp_full_name = '/IMV/%s/%s' % (p_code, xp_name)
+        # samples = o.get_experiment(xp_full_name).get_samples()
+        samples = o.get_samples(space='IMV', type=type_name)
+        all_df = samples.df
+        all_df['project'] = all_df.apply(lambda row: row['experiment'].split('/')[2], axis=1)
+        all_df = all_df[all_df['project'] == p_code]
+        all_codes = set(all_df['identifier'])
         try:
-            mapped_samples = o.get_experiment(xp_full_name).get_samples(tags=['mapped'])
-            mapped_codes = set(mapped_samples.df['identifier'])
+            # mapped_samples = o.get_experiment(xp_full_name).get_samples(tags=['mapped'])
+            mapped_samples = o.get_samples(space='IMV', type=type_name, mapped=True)
+            mapped_df = mapped_samples.df
+            mapped_df['project'] = mapped_df.apply(lambda row: row['experiment'].split('/')[2], axis=1)
+            mapped_df = mapped_df[mapped_df['project'] == p_code]
+            mapped_codes = set(mapped_df['identifier'])
         except ValueError:
             mapped_codes = set()
         unmapped_codes = all_codes - mapped_codes
-        samples_dict[xp_name] = unmapped_codes
+        samples_dict[type_name] = unmapped_codes
 
-    logging.info('Found %d unmapped MISEQ samples', len(samples_dict['MISEQ_SAMPLES']))
+    logging.info('Found %d unmapped MISEQ samples in project %s', len(samples_dict['MISEQ_SAMPLE']), p_code)
+    print('Found %d unmapped MISEQ samples', len(samples_dict['MISEQ_SAMPLE']), p_code)
 
-    for miseq_sample_id in samples_dict['MISEQ_SAMPLES']:
+    for miseq_sample_id in samples_dict['MISEQ_SAMPLE']:
         # e.g.
         # miseq_sample_id = 170623_M02081_0218_000000000-B4CPG-1
         # miseq_run_id = 170623_M02081_0218_000000000-B4CPG
         miseq_run_id = \
             '-'.join(miseq_sample_id.split('-')[:-1]) + '_%s' % p_code
-        assert miseq_run_id in samples_dict['MISEQ_RUNS'], miseq_run_id
+        assert miseq_run_id in samples_dict['MISEQ_RUN'], miseq_run_id
 
         # extract samples with get_sample (we are using unique identifiers)
         miseq_sample = o.get_sample(miseq_sample_id)
-        assert 'mapped' not in miseq_sample.tags
+        print(miseq_sample)
+        # assert 'mapped' not in miseq_sample.tags
         # run_sample can be extracted here, but we are using the 'mapped'
-        # tag only when samples are given a parent, and run_sample
+        # property only when samples are given a parent, and run_sample
         # only has children
         # run_sample = o.get_sample('/IMV/%s' % miseq_run_id)
 
         # create the run -> sample link
         logging.info('mapping sample %s', miseq_sample_id)
         miseq_sample.add_parents(miseq_run_id)
-        miseq_sample.add_tags('mapped')
+        miseq_sample.props.mapped = True  # add_tags('mapped')
         miseq_sample.save()
 
         # for resistance tests there is another relation to create
@@ -83,13 +93,14 @@ def general_mapping(project=None):
             resi_sample_id = '%s_RESISTANCE' % miseq_sample_id
             resi_sample = o.get_sample(resi_sample_id)
 
-            if 'mapped' not in resi_sample.tags:
+            if not resi_sample.props.mapped or resi_sample.props.mapped is None:
                 resi_sample.add_parents(miseq_sample_id)
-                resi_sample.add_tags('mapped')
+                resi_sample.props.mapped = True  # add_tags('mapped')
                 resi_sample.save()
                 logging.info('mapping sample %s', resi_sample_id)
             else:
                 logging.warning('sample %s already mapped', resi_sample_id)
+        break
 
 
 def run_child(cmd):
@@ -149,9 +160,34 @@ if not o.is_session_active():
     password = config['credentials']['password']
     o.login(username, password, save_token=True)
 
+
+
+# sample = o.get_sample('/IMV/170803_M02081_0226_000000000-BCJY4-1_RESISTANCE')
+# print('Before, mapped is', sample.props.mapped)
+# sample.props.mapped = True
+# sample.save()
+# print('After, mapped is', sample.props.mapped)
+#
+# smp = o.get_samples(space='IMV', mapped=True)
+# all_smp = o.get_samples(space='IMV', type='RESISTANCE_TEST')
+# df = all_smp.df
+# df['project'] = df.apply(lambda row: row['experiment'].split('/')[2], axis=1)
+# print(df)
+# sys.exit()
+# sas = set(all_smp.df['identifier'].tolist())
+# sam = set(smp.df['identifier'].tolist())
+# print(sam & sas)
+#
+# o.logout()
+# sys.exit()
+
+
 logging.info('-----------Mapping session starting------------')
-for pro in ['resistance', 'metagenomics', 'antibodies', 'plasmids', 'other']:
+for pro in ['antibodies', 'resistance', 'metagenomics', 'plasmids', 'other']:
     general_mapping(pro)
+    break
+o.logout()
+sys.exit()
 logging.info('-----------Mapping session finished------------')
 logging.info('* * * * * * * * * * * * * * * * * * * * * * * *')
 logging.info('-----------Analysis session starting-----------')
