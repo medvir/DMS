@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 
+from tqdm import tqdm
 from pybis import Openbis
 
 logging.basicConfig(
@@ -63,9 +64,8 @@ def general_mapping(project=None):
         samples_dict[type_name] = unmapped_codes
 
     logging.info('Found %d unmapped MISEQ samples in project %s', len(samples_dict['MISEQ_SAMPLE']), p_code)
-    print('Found %d unmapped MISEQ samples in project' % len(samples_dict['MISEQ_SAMPLE']))
-
-    for miseq_sample_id in samples_dict['MISEQ_SAMPLE']:
+    print('Project: %s' % p_code)
+    for miseq_sample_id in tqdm(samples_dict['MISEQ_SAMPLE']):
         # e.g.
         # miseq_sample_id = 170623_M02081_0218_000000000-B4CPG-1
         # miseq_run_id = 170623_M02081_0218_000000000-B4CPG
@@ -75,7 +75,6 @@ def general_mapping(project=None):
 
         # extract samples with get_sample (we are using unique identifiers)
         miseq_sample = o.get_sample(miseq_sample_id)
-        print(miseq_sample)
         # assert 'mapped' not in miseq_sample.tags
         # run_sample can be extracted here, but we are using the 'mapped'
         # property only when samples are given a parent, and run_sample
@@ -85,7 +84,7 @@ def general_mapping(project=None):
         # create the run -> sample link
         logging.info('mapping sample %s', miseq_sample_id)
         miseq_sample.add_parents(miseq_run_id)
-        miseq_sample.props.mapped = True  # add_tags('mapped')
+        miseq_sample.props.mapped = True
         miseq_sample.save()
 
         # for resistance tests there is another relation to create
@@ -100,6 +99,7 @@ def general_mapping(project=None):
                 logging.info('mapping sample %s', resi_sample_id)
             else:
                 logging.warning('sample %s already mapped', resi_sample_id)
+
 
 
 def run_child(cmd):
