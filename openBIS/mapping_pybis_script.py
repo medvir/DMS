@@ -182,7 +182,7 @@ logging.info('Analysis will proceed on %d samples', len(samples_to_analyse))
 
 c = 0
 files_to_delete = []
-for sample_id in samples_to_analyse:
+for sample_id in tqdm(samples_to_analyse):
     sample = o.get_sample(sample_id)
     virus = sample.props.virus
     sample_name = sample.props.sample_name
