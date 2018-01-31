@@ -63,7 +63,7 @@ def general_mapping(project=None):
         samples_dict[type_name] = unmapped_codes
 
     logging.info('Found %d unmapped MISEQ samples in project %s', len(samples_dict['MISEQ_SAMPLE']), p_code)
-    print('Found %d unmapped MISEQ samples', len(samples_dict['MISEQ_SAMPLE']), p_code)
+    print('Found %d unmapped MISEQ samples in project' % len(samples_dict['MISEQ_SAMPLE']))
 
     for miseq_sample_id in samples_dict['MISEQ_SAMPLE']:
         # e.g.
@@ -100,7 +100,6 @@ def general_mapping(project=None):
                 logging.info('mapping sample %s', resi_sample_id)
             else:
                 logging.warning('sample %s already mapped', resi_sample_id)
-        break
 
 
 def run_child(cmd):
@@ -150,7 +149,6 @@ def run_minvar(ds):
 
 
 # open the session first
-
 o = Openbis('https://s3itdata.uzh.ch', verify_certificates=True)
 if not o.is_session_active():
     o = Openbis('https://s3itdata.uzh.ch', verify_certificates=False)
@@ -161,41 +159,21 @@ if not o.is_session_active():
     o.login(username, password, save_token=True)
 
 
-
-# sample = o.get_sample('/IMV/170803_M02081_0226_000000000-BCJY4-1_RESISTANCE')
-# print('Before, mapped is', sample.props.mapped)
-# sample.props.mapped = True
-# sample.save()
-# print('After, mapped is', sample.props.mapped)
-#
-# smp = o.get_samples(space='IMV', mapped=True)
-# all_smp = o.get_samples(space='IMV', type='RESISTANCE_TEST')
-# df = all_smp.df
-# df['project'] = df.apply(lambda row: row['experiment'].split('/')[2], axis=1)
-# print(df)
-# sys.exit()
-# sas = set(all_smp.df['identifier'].tolist())
-# sam = set(smp.df['identifier'].tolist())
-# print(sam & sas)
-#
-# o.logout()
-# sys.exit()
-
-
 logging.info('-----------Mapping session starting------------')
 for pro in ['antibodies', 'resistance', 'metagenomics', 'plasmids', 'other']:
     general_mapping(pro)
-    break
-o.logout()
-sys.exit()
 logging.info('-----------Mapping session finished------------')
 logging.info('* * * * * * * * * * * * * * * * * * * * * * * *')
 logging.info('-----------Analysis session starting-----------')
+
 # Fetch resistance samples where minvar must be run
-res_test_mapped = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(tags=['mapped'])
+res_test_mapped = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(mapped=True)
 rtm = set(res_test_mapped.df['identifier'])
-res_test_analysed = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(tags=['analysed'])
-rta = set(res_test_analysed.df['identifier'])
+try:
+    res_test_analysed = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(mapped=True, analysed=True)
+    rta = set(res_test_analysed.df['identifier'])
+except ValueError:
+    rta = set()
 # res_test_samples = [o.get_sample('/IMV/170803_M02081_0226_000000000-BCJY4-1_RESISTANCE')]
 logging.info('Found %d mapped samples', len(rtm))
 logging.info('Found %d analysed samples', len(rta))
@@ -219,7 +197,7 @@ for sample_id in samples_to_analyse:
         logging.info('Datasets found. Sample: %s - virus: %s', sample.code, virus)
     except ValueError:
         logging.warning('No datasets')
-        sample.add_tags('analysed')
+        sample.props.analysed = True
         sample.save()
         continue
     ds_code1 = str(rd[0].permId)
@@ -237,7 +215,7 @@ for sample_id in samples_to_analyse:
             upload_name = filename
         sample.add_attachment(upload_name)
         files_to_delete.append(upload_name)
-    sample.add_tags('analysed')
+    sample.props.analysed = True
     sample.save()
 
     c += 1
