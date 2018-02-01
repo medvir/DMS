@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Map samples in openBIS following their unique naming scheme."""
 import configparser
+import io
 import logging
 import logging.handlers
 import os
@@ -9,16 +10,30 @@ import subprocess
 import sys
 import tempfile
 
-from tqdm import tqdm
 from pybis import Openbis
-
-logging.basicConfig(
-    filename='pybis_script.log', level=logging.INFO,
-    format='%(levelname)s %(asctime)s %(filename)s: %(funcName)s() %(lineno)d: \t%(message)s',
-    datefmt='%Y/%m/%d %H:%M:%S')
+from tqdm import tqdm
 
 files_to_save = ['report.md', 'report.pdf', 'merged_muts_drm_annotated.csv', 'minvar.log', 'cns_max_freq.fasta',
                  'merged_mutations_nt.csv']
+
+
+class TqdmToLogger(io.StringIO):
+    """Output stream for tqdm which will output to logger module instead of the STDOUT."""
+
+    logger_l = None
+    level = None
+    buf = ''
+
+    def __init__(self, logger_l, level=None):
+        super(TqdmToLogger, self).__init__()
+        self.logger = logger_l
+        self.level = level or logging.INFO
+
+    def write(self, buf):
+        self.buf = buf.strip('\r\n\t ')
+
+    def flush(self):
+        self.logger.log(self.level, self.buf)
 
 
 def general_mapping(project=None):
@@ -64,8 +79,7 @@ def general_mapping(project=None):
         samples_dict[type_name] = unmapped_codes
 
     logging.info('Found %d unmapped MISEQ samples in project %s', len(samples_dict['MISEQ_SAMPLE']), p_code)
-    print('Project: %s' % p_code)
-    for miseq_sample_id in tqdm(samples_dict['MISEQ_SAMPLE']):
+    for miseq_sample_id in tqdm(samples_dict['MISEQ_SAMPLE'], file=tqdm_out, mininterval=30):
         # e.g.
         # miseq_sample_id = 170623_M02081_0218_000000000-B4CPG-1
         # miseq_run_id = 170623_M02081_0218_000000000-B4CPG
@@ -82,7 +96,7 @@ def general_mapping(project=None):
         # run_sample = o.get_sample('/IMV/%s' % miseq_run_id)
 
         # create the run -> sample link
-        logging.info('mapping sample %s', miseq_sample_id)
+        logging.debug('mapping sample %s', miseq_sample_id)
         miseq_sample.add_parents(miseq_run_id)
         miseq_sample.props.mapped = True
         miseq_sample.save()
@@ -94,12 +108,11 @@ def general_mapping(project=None):
 
             if not resi_sample.props.mapped or resi_sample.props.mapped is None:
                 resi_sample.add_parents(miseq_sample_id)
-                resi_sample.props.mapped = True  # add_tags('mapped')
+                resi_sample.props.mapped = True
                 resi_sample.save()
-                logging.info('mapping sample %s', resi_sample_id)
+                logging.debug('mapping sample %s', resi_sample_id)
             else:
                 logging.warning('sample %s already mapped', resi_sample_id)
-
 
 
 def run_child(cmd):
@@ -148,6 +161,14 @@ def run_minvar(ds):
     return saved_files
 
 
+logging.basicConfig(
+    filename='pybis_script.log', level=logging.INFO,
+    format='%(levelname)s %(asctime)s: %(funcName)s() %(lineno)d: \t%(message)s',
+    datefmt='%Y/%m/%d %H:%M:%S')
+
+logger = logging.getLogger()
+tqdm_out = TqdmToLogger(logger, level=logging.INFO)
+
 # open the session first
 o = Openbis('https://s3itdata.uzh.ch', verify_certificates=True)
 if not o.is_session_active():
@@ -182,7 +203,7 @@ logging.info('Analysis will proceed on %d samples', len(samples_to_analyse))
 
 c = 0
 files_to_delete = []
-for sample_id in tqdm(samples_to_analyse):
+for sample_id in tqdm(samples_to_analyse, file=tqdm_out):
     sample = o.get_sample(sample_id)
     virus = sample.props.virus
     sample_name = sample.props.sample_name
