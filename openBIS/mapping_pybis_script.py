@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 files_to_save = ['report.md', 'report.pdf', 'merged_muts_drm_annotated.csv', 'minvar.log', 'cns_max_freq.fasta',
                  'merged_mutations_nt.csv', 'subtype_evidence.csv', 'cns_ambiguous.fasta']
-
+analyses_per_run = 20
 
 class TqdmToLogger(io.StringIO):
     """Output stream for tqdm which will output to logger module instead of the STDOUT."""
@@ -198,10 +198,9 @@ except ValueError:
 # res_test_samples = [o.get_sample('/IMV/170803_M02081_0226_000000000-BCJY4-1_RESISTANCE')]
 logging.info('Found %d mapped samples', len(rtm))
 logging.info('Found %d analysed samples', len(rta))
-samples_to_analyse = rtm - rta
+samples_to_analyse = list(rtm - rta)[:analyses_per_run]
 logging.info('Analysis will proceed on %d samples', len(samples_to_analyse))
 
-c = 0
 files_to_delete = []
 for sample_id in tqdm(samples_to_analyse, file=tqdm_out):
     sample = o.get_sample(sample_id)
@@ -238,10 +237,6 @@ for sample_id in tqdm(samples_to_analyse, file=tqdm_out):
         files_to_delete.append(upload_name)
     sample.props.analysed = True
     sample.save()
-
-    c += 1
-    if c == 20:
-        break
 
 for filename in set(files_to_delete):
     try:
