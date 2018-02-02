@@ -14,7 +14,7 @@ from pybis import Openbis
 from tqdm import tqdm
 
 files_to_save = ['report.md', 'report.pdf', 'merged_muts_drm_annotated.csv', 'minvar.log', 'cns_max_freq.fasta',
-                 'merged_mutations_nt.csv']
+                 'merged_mutations_nt.csv', 'subtype_evidence.csv', 'cns_ambiguous.fasta']
 
 
 class TqdmToLogger(io.StringIO):
