@@ -161,13 +161,19 @@ def run_minvar(ds):
     return saved_files
 
 
+LOG_FILENAME = 'pybis_script.log'
 logging.basicConfig(
-    filename='pybis_script.log', level=logging.INFO,
+    filename=LOG_FILENAME, level=logging.INFO,
     format='%(levelname)s %(asctime)s: %(funcName)s() %(lineno)d: \t%(message)s',
     datefmt='%Y/%m/%d %H:%M:%S')
 
+
 logger = logging.getLogger()
 tqdm_out = TqdmToLogger(logger, level=logging.INFO)
+
+# Add the log message handler to the logger
+handler = logging.handlers.RotatingFileHandler(LOG_FILENAME, maxBytes=1E7, backupCount=5)
+logger.addHandler(handler)
 
 # open the session first
 o = Openbis('https://s3itdata.uzh.ch', verify_certificates=True)
@@ -206,9 +212,6 @@ for sample_id in tqdm(samples_to_analyse, file=tqdm_out):
     sample = o.get_sample(sample_id)
     virus = sample.props.virus
     sample_name = sample.props.sample_name
-    if 'analysed' in sample.tags:
-        logging.warning('Sample already analysed: should not be here!')
-        continue
     parents = sample.get_parents()
     assert len(parents) == 1
     parent = parents[0]
