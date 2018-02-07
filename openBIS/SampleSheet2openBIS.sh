@@ -26,19 +26,6 @@ RGT_box2='undefined'
 openbis='n'
 timavo='n'
 
-# global variable to allow a function return it
-ismolis='undefined'
-
-test_molis(){
-    if [[ $1 =~ ^100[0-9]{7} ]]; then
-        ismolis=true
-        return
-    else
-        ismolis=false
-        return
-    fi
-}
-
 write_miseq_run(){
     # input: run_name space
     # space is Diagnostics or Research
@@ -54,6 +41,7 @@ write_miseq_run(){
     {
         printf "INVESTIGATOR_NAME = %s\n" "$Investigator_Name"
         printf "EXPERIMENT_NAME = %s\n" "$Experiment_Name"
+        printf "SAMPLE_SHEET_NAME = %s\n" "$Sample_Sheet"
         printf "ACCOUNT = %s\n" "$Account"
         printf "DATE = %s-%s-%s\n" "${YYYY}" "${MM}" "${DD}"
         printf "MISEQ_WORKFLOW = %s\n" "$Workflow"
@@ -350,7 +338,7 @@ process_runs(){
     #sed -e "s/ /_/g" < "$rundir/Data/Intensities/BaseCalls/SampleSheet.csv" > sample_sheet.tmp
     # sample sheets are now created with Stefan's template: no need to remove them anymore
     cp "$rundir/SampleSheet.csv" sample_sheet.tmp
-    count_openbis=$(grep -c openbis sample_sheet.tmp)
+    # count_openbis=$(grep -c openbis sample_sheet.tmp)
     ### counters for read 1/2 and samples
     r=0
     s=0
@@ -439,6 +427,10 @@ process_runs(){
     rsync -av --rsync-path="mkdir -p $smpshdst && rsync" sample_sheet.tmp "timavo:$smpshdst/SampleSheet.csv"
     rm sample_sheet.tmp
 
+    # get sample sheet name from runParameter.xml file and save runParameter.xml file with the sample sheet name
+    Sample_Sheet=$(grep -A 1 ReagentKitRFIDTag "$rundir/runParameters.xml" | grep SerialNumber | sed 's/^.*<SerialNumber>//' | sed 's/<\/SerialNumber>//')
+    rsync -av --stats --chmod=ug+rwx -p "$rundir/runParameters.xml" "timavo:$timavoDST/MiSeqRunParameters/${Sample_Sheet}.xml"
+
     # if any sample was X then write Miseq run sample with PROJECT = X
     if [ "$anti_sample" = true ]; then
         echo "WRITING ANTIBODIES RUN"
@@ -463,18 +455,15 @@ process_runs(){
         write_miseq_run "${run_name}_RESISTANCE" Resistance
     fi
 
-    # get sample sheet name from runParameter.xml file and save runParameter.xml file with the sample sheet name
-    SAMPLESHEET=$(grep -A 1 ReagentKitRFIDTag "$rundir/runParameters.xml" | grep SerialNumber | sed 's/^.*<SerialNumber>//' | sed 's/<\/SerialNumber>//')
-    rsync -av --stats --chmod=ug+rwx -p "$rundir/runParameters.xml" "timavo:$timavoDST/MiSeqRunParameters/${SAMPLESHEET}.xml"
-
     # reset [Header] and [Reads] information
     Investigator_Name='undefined'
     Experiment_Name='undefined'
-#    Date='undefined'
+    Sample_Sheet='undefined'
+    # Date='undefined'
     Workflow='undefined'
     Application='undefined'
     Assay='undefined'
-#    Description='undefined'
+    # Description='undefined'
     Chemistry='undefined'
     Read1=''
     Read2=''
