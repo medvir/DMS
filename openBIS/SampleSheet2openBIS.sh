@@ -424,7 +424,7 @@ process_runs(){
     echo "Syncing SampleSheet to timavo"
     run_name=$(basename "$rundir")
     smpshdst="${timavoDST}/MiSeqOutput/${run_name}/Data/Intensities/BaseCalls/"
-    rsync -av --rsync-path="mkdir -p $smpshdst && rsync" sample_sheet.tmp "timavo:$smpshdst/SampleSheet.csv"
+    rsync -av --chmod=ug+rwx --rsync-path="mkdir -p $smpshdst && rsync" sample_sheet.tmp "timavo:$smpshdst/SampleSheet.csv"
     rm sample_sheet.tmp
 
     # get sample sheet name from runParameter.xml file and save runParameter.xml file with the sample sheet name
