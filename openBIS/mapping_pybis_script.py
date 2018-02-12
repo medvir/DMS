@@ -231,11 +231,9 @@ for sample_id in tqdm(samples_to_analyse, file=tqdm_out):
         fh.write(v)
         fh.close()
         # add molis number into filename
-        if filename == 'report.pdf':
-            upload_name = 'report_%s.pdf' % sample_name
-            os.rename(filename, upload_name)
-        else:
-            upload_name = filename
+        root, ext = os.path.splitext(filename)
+        upload_name = '%s_%s.%s' % (root, sample_name, ext)
+        os.rename(filename, upload_name)
         sample.add_attachment(upload_name)
         files_to_delete.append(upload_name)
     sample.props.analysed = True
