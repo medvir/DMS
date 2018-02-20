@@ -232,7 +232,7 @@ for sample_id in tqdm(samples_to_analyse, file=tqdm_out):
         fh.close()
         # add molis number into filename
         root, ext = os.path.splitext(filename)
-        upload_name = '%s_%s.%s' % (root, sample_name, ext)
+        upload_name = '%s_%s%s' % (root, sample_name, ext)
         os.rename(filename, upload_name)
         sample.add_attachment(upload_name)
         files_to_delete.append(upload_name)
