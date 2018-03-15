@@ -193,9 +193,10 @@ logging.info('-----------Mapping session finished------------')
 logging.info('* * * * * * * * * * * * * * * * * * * * * * * *')
 logging.info('-----------Analysis session starting-----------')
 
-# Fetch resistance samples where minvar must be run
+# Fetch all resistance samples that are mapped
 res_test_mapped = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(mapped=True)
 rtm = set(res_test_mapped.df['identifier'])
+# All resistance samples that have already been analyzed
 try:
     res_test_analysed = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(mapped=True, analysed=True)
     rta = set(res_test_analysed.df['identifier'])
@@ -204,17 +205,21 @@ except ValueError:
 # res_test_samples = [o.get_sample('/IMV/170803_M02081_0226_000000000-BCJY4-1_RESISTANCE')]
 logging.info('Found %d mapped samples', len(rtm))
 logging.info('Found %d analysed samples', len(rta))
+# samples that need to be analyzed, but this script will only do a maximum number of analysis each time it's called
 samples_to_analyse = list(rtm - rta)[:analyses_per_run]
 logging.info('Analysis will proceed on %d samples', len(samples_to_analyse))
 
-files_to_delete = []
+files_to_delete = []  # store files that will be deleted at the end
 for sample_id in tqdm(samples_to_analyse, file=tqdm_out):
     sample = o.get_sample(sample_id)
     virus = sample.props.virus
     sample_name = sample.props.sample_name
     parents = sample.get_parents()
     assert len(parents) == 1
-    parent = parents[0]
+    parent = parents[0]  # MISEQ_SAMPLE
+    grandparents = parent.get_parents()
+    assert len(grandparents) == 1
+    grandpa = grandparents[0]  # MISEQ_RUN
     try:
         rd = parent.get_datasets()
         logging.info('Datasets found. Sample: %s - virus: %s', sample.code, virus)
@@ -235,6 +240,9 @@ for sample_id in tqdm(samples_to_analyse, file=tqdm_out):
         upload_name = '%s_%s%s' % (root, sample_name, ext)
         os.rename(filename, upload_name)
         sample.add_attachment(upload_name)
+        # add cns_ambiguous_molis_number.fasta as attachment to MISEQ_RUN
+        if upload_name.startswith('cns_ambiguous'):
+            grandpa.add_attachment(upload_name)
         files_to_delete.append(upload_name)
     sample.props.analysed = True
     sample.save()
