@@ -243,6 +243,7 @@ for sample_id in tqdm(samples_to_analyse, file=tqdm_out):
         # add cns_ambiguous_molis_number.fasta as attachment to MISEQ_RUN
         if upload_name.startswith('cns_ambiguous'):
             grandpa.add_attachment(upload_name)
+            grandpa.save()
         files_to_delete.append(upload_name)
     sample.props.analysed = True
     sample.save()
