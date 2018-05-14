@@ -41,7 +41,7 @@ By pressing this button, several tests are performed directly on the MiSeq Sampl
 * Operator Name is within the Operator list
 * Sequenzierdatum is in date format and later than 01/01/17
 * PhiX is a whole number between 0 and 100
-* RGT Box 1 and 2 start with "RGT", are 10 characters in total and are not the same
+* RGT Box 1 and 2 start with "RGT", are 11 characters in total and are not the same
 * MS Nr. starts with "MS", ends with "-150V3" and is 15 characters in total
 * Sample_ID is a whole number between 1 and 96
 * Sample_Name only contains numbers (0-9), letters (a-z, A-Z) or dashes (-)

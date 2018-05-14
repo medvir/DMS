@@ -69,7 +69,7 @@ Sub validate()
     'Validate RGT Nr
     Range("B12").Select
     
-    If Selection.Validation.Value And Len(Selection) = 10 And Selection <> Selection.Offset(1, 0) Then
+    If Selection.Validation.Value And Len(Selection) = 11 And Selection <> Selection.Offset(1, 0) Then
         Selection.Interior.ColorIndex = 0
     Else
         exceptionCount = exceptionCount + 1
@@ -78,7 +78,7 @@ Sub validate()
     
     Range("B13").Select
     
-    If Selection.Validation.Value And Len(Selection) = 10 And Selection <> Selection.Offset(-1, 0) Then
+    If Selection.Validation.Value And Len(Selection) = 11 And Selection <> Selection.Offset(-1, 0) Then
         Selection.Interior.ColorIndex = 0
     Else
         exceptionCount = exceptionCount + 1
