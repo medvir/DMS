@@ -13,8 +13,9 @@ import tempfile
 from pybis import Openbis
 from tqdm import tqdm
 
-files_to_save = ['report.md', 'report.pdf', 'merged_muts_drm_annotated.csv', 'minvar.log', 'cns_max_freq.fasta',
+minvar_2_save = ['report.md', 'report.pdf', 'merged_muts_drm_annotated.csv', 'minvar.log', 'cns_max_freq.fasta',
                  'merged_mutations_nt.csv', 'subtype_evidence.csv', 'cns_ambiguous.fasta']
+v3seq_2_save = ['haplotypes.fasta', 'v3seq.log']
 analyses_per_run = 20
 
 class TqdmToLogger(io.StringIO):
@@ -132,11 +133,15 @@ def run_child(cmd):
     return output
 
 
-def run_minvar(ds):
-    """Run minvar and return a dictionary of output files."""
+def run_exe(ds, exe=None):
+    """Run external program and return a dictionary of output files."""
+    if exe == 'minvar':
+        files_to_save = minvar_2_save
+    elif exe == 'v3seq':
+        files_to_save = v3seq_2_save
     rdir = os.getcwd()
     with tempfile.TemporaryDirectory() as tmpdirname:
-        logging.info('running minvar in %s', tmpdirname)
+        logging.info('running %s in %s', exe, tmpdirname)
         os.chdir(tmpdirname)
         for f in list(ds.file_list):
             if not f.endswith('properties'):
@@ -148,15 +153,15 @@ def run_minvar(ds):
             os.chdir(rdir)
             return {}
         assert os.path.exists(fastq_file), ' '.join(os.listdir())
-        cml = shlex.split('minvar -f %s' % fastq_file)
-        with open('/tmp/minvar.err', 'w') as oh:
+        cml = shlex.split('%s -f %s' % (exe, fastq_file))
+        with open('/tmp/%s.err' % exe, 'w') as oh:
             subprocess.call(cml, stdout=oh, stderr=subprocess.STDOUT)
         try:
-            logging.info('minvar finished, copying files')
+            logging.info('%s finished, copying files', exe)
             saved_files = {fn: open(fn, 'rb').read() for fn in files_to_save}
         except FileNotFoundError:
-            logging.warning('minvar finished with an error, saving minvar.err')
-            saved_files = {'minvar.err': open('/tmp/minvar.err', 'rb').read()}
+            logging.warning('%s finished with an error, saving %s.err', exe, exe)
+            saved_files = {'%s.err' % exe: open('/tmp/%s.err' % exe, 'rb').read()}
     os.chdir(rdir)
     return saved_files
 
@@ -230,7 +235,9 @@ for sample_id in tqdm(samples_to_analyse, file=tqdm_out):
         continue
     ds_code1 = str(rd[0].permId)
     dataset = o.get_dataset(ds_code1)
-    minvar_files = run_minvar(dataset)
+
+    # run minvar on dataset, i.e. on the fastq file therein
+    minvar_files = run_exe(dataset, 'minvar')
     for filename, v in minvar_files.items():
         fh = open(filename, 'wb')
         fh.write(v)
@@ -245,6 +252,21 @@ for sample_id in tqdm(samples_to_analyse, file=tqdm_out):
             grandpa.add_attachment(upload_name)
             grandpa.save()
         files_to_delete.append(upload_name)
+
+    # on HIV only, run v3seq too
+    if virus == 'HIV-1':
+        v3seq_files = run_exe(dataset, 'v3seq')
+        for filename, v in v3seq_files.items():
+            fh = open(filename, 'wb')
+            fh.write(v)
+            fh.close()
+            # add molis number into filename
+            root, ext = os.path.splitext(filename)
+            upload_name = '%s_%s%s' % (root, sample_name, ext)
+            os.rename(filename, upload_name)
+            sample.add_attachment(upload_name)
+            files_to_delete.append(upload_name)
+
     sample.props.analysed = True
     sample.save()
 
