@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 minvar_2_save = ['report.md', 'report.pdf', 'merged_muts_drm_annotated.csv', 'minvar.log', 'cns_max_freq.fasta',
                  'merged_mutations_nt.csv', 'subtype_evidence.csv', 'cns_ambiguous.fasta']
-v3seq_2_save = ['haplotypes.fasta', 'v3seq.log']
+v3seq_2_save = ['v3haplotypes.fasta', 'v3seq.log']
 analyses_per_run = 20
 
 class TqdmToLogger(io.StringIO):
