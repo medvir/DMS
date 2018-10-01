@@ -92,12 +92,20 @@ write_miseq_sample_zero(){
 
     fastq_file=$incomingdir/$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_R1_001.fastq.gz
     fastq_file_2=$incomingdir/$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_R2_001.fastq.gz
+    index_file=$incomingdir/$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_I1_001.fastq.gz
+    index_file_2=$incomingdir/$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_I2_001.fastq.gz
 
     echo "Syncing to TIMAVO"
     DST2="${timavoDST}/MiSeqOutput/${run_name}/Data/Intensities/BaseCalls/"
     rsync -a --rsync-path="mkdir -p $DST2 && rsync" "$fastq_file" "timavo:$DST2"
     if [ -e "$fastq_file_2" ]; then
         rsync "$fastq_file_2" "timavo:$DST2"
+    fi
+    if [ -e "$index_file" ]; then
+        rsync "$index_file" "timavo:$DST2"
+    fi
+    if [ -e "$index_file_2" ]; then
+        rsync "$index_file_2" "timavo:$DST2"
     fi
 
     ### write properties file
