@@ -198,6 +198,8 @@ write_miseq_sample(){
 
     fastq_file=$incomingdir/$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_R1_001.fastq.gz
     fastq_file_2=$incomingdir/$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_R2_001.fastq.gz
+    index_file=$incomingdir/$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_I1_001.fastq.gz
+    index_file_2=$incomingdir/$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_I2_001.fastq.gz
 
     if [[ $timavo == *"y"* ]]; then
         echo "Syncing to TIMAVO"
@@ -206,6 +208,13 @@ write_miseq_sample(){
         if [ -e "$fastq_file_2" ]; then
             rsync "$fastq_file_2" "timavo:$DST2"
         fi
+        if [ -e "$index_file" ]; then
+            rsync "$index_file" "timavo:$DST2"
+        fi
+        if [ -e "$index_file_2" ]; then
+            rsync "$index_file_2" "timavo:$DST2"
+        fi
+
       else
         echo "Not syncing to TIMAVO"
     fi
