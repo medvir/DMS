@@ -199,6 +199,7 @@ logging.info('* * * * * * * * * * * * * * * * * * * * * * * *')
 logging.info('-----------Analysis session starting-----------')
 
 # Fetch all resistance samples that are mapped
+time.sleep(30)
 res_test_mapped = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(mapped=True)
 rtm = set(res_test_mapped.df['identifier'])
 # All resistance samples that have already been analyzed
