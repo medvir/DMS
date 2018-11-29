@@ -9,6 +9,7 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import time
 
 from pybis import Openbis
 from tqdm import tqdm
@@ -196,10 +197,10 @@ for pro in ['antibodies', 'resistance', 'metagenomics', 'plasmids', 'other']:
     general_mapping(pro)
 logging.info('-----------Mapping session finished------------')
 logging.info('* * * * * * * * * * * * * * * * * * * * * * * *')
+time.sleep(30)
 logging.info('-----------Analysis session starting-----------')
 
 # Fetch all resistance samples that are mapped
-#time.sleep(30)
 res_test_mapped = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(mapped=True)
 rtm = set(res_test_mapped.df['identifier'])
 # All resistance samples that have already been analyzed
