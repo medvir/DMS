@@ -88,7 +88,7 @@ Sub validate()
     'Validate MS Nr
     ThisWorkbook.Sheets("Sample Namen").Activate
     ActiveSheet.Unprotect
-    Range("M8").Select
+    Range("L8").Select
     
     If Selection.Validation.Value And Left(Selection, 2) = "MS" And Right(Selection, 6) = "-150V3" And Len(Selection) = 15 Then
         Selection.Interior.color = 11854022
