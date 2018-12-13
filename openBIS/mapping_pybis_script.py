@@ -197,7 +197,7 @@ for pro in ['antibodies', 'resistance', 'metagenomics', 'plasmids', 'other']:
     general_mapping(pro)
 logging.info('-----------Mapping session finished------------')
 logging.info('* * * * * * * * * * * * * * * * * * * * * * * *')
-time.sleep(60)
+time.sleep(300)
 logging.info('-----------Analysis session starting-----------')
 
 # Fetch all resistance samples that are mapped
