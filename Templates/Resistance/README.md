@@ -26,6 +26,10 @@ If the selection needs to be changed, it can be done as follows:
 
 ![](change_name_list.gif "Example of adding a new Virus to the Name list")
 
+### Plate layout (visible)
+Shows the index plate with the wells to pipette from including the sample nr. it correspondes to.  
+Can be printed to help when pipetting the indices.
+
 ### MiSeq SampleSheet (visible)
 The worksheet which is later used (in .csv format) as SampleSheet for the MiSeq sequencer and after the sequencing run to start the analysis.
 
