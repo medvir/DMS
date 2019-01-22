@@ -2,8 +2,6 @@
 
 - [x] Osvaldo Zagordi
 - [x] Michael Huber michube
-
-### access to space IMV
 - [x] Kufner Verena vkufne
 - [x] Stefan Schmutz stschmu
 - [x] Merle Schanz merles
@@ -13,4 +11,5 @@
 - [x] Leiber Selina seleib
 - [x] Ziltener Gabriela gazilt
 - [x] Shah Cyril cshah
-- [ ] Jesper Wallisch
+- [x] Sarah Wicki sawick
+- [x] Michel Crameri mcrame
