@@ -4,7 +4,7 @@ Attribute saveascsv.VB_ProcData.VB_Invoke_Func = " \n14"
     Dim msnumber As String
     Dim save_path As String
 
-    msnumber = Range("M8")
+    msnumber = Range("L8")
     
     #If Mac Then
         'save_path = "/Volumes/Research/Common/Equipment/MiSeq/MiSeqSampleSheets/" + msnumber + ".csv"
