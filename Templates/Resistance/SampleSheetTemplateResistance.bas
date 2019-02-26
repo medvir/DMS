@@ -4,7 +4,7 @@ Attribute saveascsv.VB_ProcData.VB_Invoke_Func = " \n14"
     Dim msnumber As String
     Dim save_path As String
 
-    msnumber = Range("L8")
+    msnumber = Range("M8")
     
     #If Mac Then
         'save_path = "/Volumes/Research/Common/Equipment/MiSeq/MiSeqSampleSheets/" + msnumber + ".csv"
@@ -88,7 +88,7 @@ Sub validate()
     'Validate MS Nr
     ThisWorkbook.Sheets("Sample Namen").Activate
     ActiveSheet.Unprotect
-    Range("L8").Select
+    Range("M8").Select
     
     If Selection.Validation.Value And Left(Selection, 2) = "MS" And Right(Selection, 6) = "-150V3" And Len(Selection) = 15 Then
         Selection.Interior.color = 11854022

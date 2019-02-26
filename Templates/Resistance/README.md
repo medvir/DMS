@@ -13,7 +13,8 @@ The Worksheet where users insert all the informations needed and the indexprimer
 Where all indices (index names and sequences) of the Nextera Index Kit are listed.
 
 ### indices order (hidden)
-Where the order of the indexprimer combinations is defined. It loops through all 96 combinations by column (A1 to H1, A2 to H2 ... A12 to H12).
+Where the order of the indexprimer combinations is defined. It loops through all possible 96 combinations in a way that ensures a highest possible diversity.  
+This list can be changed and it'll change the order the indexprimer combinations in the Sample Namen worksheet.
 
 ### Virus and Target infos (hidden)
 Where the Name lists are defined which are allowed in the corresponding fields in the Sample Namen worksheet.  
@@ -25,10 +26,6 @@ If the selection needs to be changed, it can be done as follows:
 * Protect and Hide Sheet again
 
 ![](change_name_list.gif "Example of adding a new Virus to the Name list")
-
-### Plate layout (visible)
-Shows the index plate with the wells to pipette from including the sample nr. it correspondes to.  
-Can be printed to help when pipetting the indices.
 
 ### MiSeq SampleSheet (visible)
 The worksheet which is later used (in .csv format) as SampleSheet for the MiSeq sequencer and after the sequencing run to start the analysis.
@@ -70,3 +67,6 @@ If you try this on Excel for Mac you'll receive a message that you have to save 
 The VBA code can be edited best with Excel for Windows (currently there's no proper VBA editor on Excel for Mac).  
 The Visual Basic environment can be found under the Developer tab. If this tab is not visible visit [this](https://msdn.microsoft.com/en-us/library/bb608625.aspx) site.  
 The code is saved under Modules in SampleSheetTemplateResistance. It contains two Subroutines (begin with `Sub saveascsv()` and `Sub validate()` and end with `End Sub`).
+
+## Todo (optional)
+* include test for uniqueness of indexprimer combinations
