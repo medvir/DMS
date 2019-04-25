@@ -16,7 +16,7 @@ from tqdm import tqdm
 
 minvar_2_save = ['report.md', 'report.pdf', 'merged_muts_drm_annotated.csv', 'minvar.log', 'cns_max_freq.fasta',
                  'merged_mutations_nt.csv', 'subtype_evidence.csv', 'cns_ambiguous.fasta']
-v3seq_2_save = ['v3haplotypes.fasta', 'v3seq.log']
+v3seq_2_save = ['v3haplotypes.fasta', 'v3seq.log', 'v3cons.fasta']
 analyses_per_run = 20
 
 class TqdmToLogger(io.StringIO):
@@ -47,14 +47,14 @@ def general_mapping(project=None):
     """
     logging.info('Mapping called for project %s', project)
     p_code = project.upper()
-    valid_projects = ['RESISTANCE', 'METAGENOMICS', 'PLASMIDS', 'OTHER', 'ANTIBODIES']
+    valid_projects = ['RESISTANCE', 'METAGENOMICS', 'PLASMIDS', 'OTHER', 'ANTIBODIES', 'RETROSEQ']
     if p_code not in valid_projects:
         sys.exit('Choose a valid project: %s' % ','.join(valid_projects))
 
     logging.info('We are here in project %s', p_code)
     # define experiments list
     type_names = ['MISEQ_RUN', 'MISEQ_SAMPLE']
-    if p_code == 'RESISTANCE':
+    if p_code == 'RESISTANCE' or p_code == 'RETROSEQ' :
         type_names.append('RESISTANCE_TEST')
 
     # dict with a list of samples from each experiment in this project
@@ -104,9 +104,13 @@ def general_mapping(project=None):
         miseq_sample.save()
 
         # for resistance tests there is another relation to create
-        if p_code == 'RESISTANCE':
+        if p_code == 'RESISTANCE' or p_code == 'RETROSEQ' :
+            #if p_code == 'RESISTANCE':
             resi_sample_id = '%s_RESISTANCE' % miseq_sample_id
             resi_sample = o.get_sample(resi_sample_id)
+            #elif p_code == 'RETROSEQ' :
+            #    resi_sample_id = '%s_RETROSEQ' % miseq_sample_id
+            #    resi_sample = o.get_sample(resi_sample_id)
 
             if not resi_sample.props.mapped or resi_sample.props.mapped is None:
                 resi_sample.add_parents(miseq_sample_id)
@@ -115,6 +119,7 @@ def general_mapping(project=None):
                 logging.debug('mapping sample %s', resi_sample_id)
             else:
                 logging.warning('sample %s already mapped', resi_sample_id)
+        
 
 
 def run_child(cmd):
@@ -166,6 +171,69 @@ def run_exe(ds, exe=None):
     os.chdir(rdir)
     return saved_files
 
+def run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete):
+    
+    for sample_id in tqdm(samples_to_analyse, file=tqdm_out):
+        sample = o.get_sample(sample_id)
+        virus = sample.props.virus
+        sample_name = sample.props.sample_name
+        parents = sample.get_parents()
+        assert len(parents) == 1
+        parent = parents[0]  # MISEQ_SAMPLE
+        grandparents = parent.get_parents()
+        assert len(grandparents) == 1
+        grandpa = grandparents[0]  # MISEQ_RUN
+        try:
+            rd = parent.get_datasets()
+            logging.info('Datasets found. Sample: %s - virus: %s', sample.code, virus)
+        except ValueError:
+            logging.warning('No datasets')
+            sample.props.analysed = True
+            sample.save()
+            continue
+        ds_code1 = str(rd[0].permId)
+        dataset = o.get_dataset(ds_code1)
+    
+        # run minvar on dataset, i.e. on the fastq file therein
+        minvar_files = run_exe(dataset, 'minvar')
+        for filename, v in minvar_files.items():
+            fh = open(filename, 'wb')
+            fh.write(v)
+            fh.close()
+            # add molis number into filename
+            root, ext = os.path.splitext(filename)
+            upload_name = '%s_%s%s' % (root, sample_name, ext)
+            os.rename(filename, upload_name)
+            sample.add_attachment(upload_name)
+            # add cns_ambiguous_molis_number.fasta as attachment to MISEQ_RUN
+            if upload_name.startswith('cns_ambiguous'):
+                grandpa.add_attachment(upload_name)
+                grandpa.save()
+            files_to_delete.append(upload_name)
+    
+        # on HIV only, run v3seq too
+        if virus == 'HIV-1':
+            v3seq_files = run_exe(dataset, 'v3seq')
+            for filename, v in v3seq_files.items():
+                fh = open(filename, 'wb')
+                fh.write(v)
+                fh.close()
+                # add molis number into filename
+                root, ext = os.path.splitext(filename)
+                upload_name = '%s_%s%s' % (root, sample_name, ext)
+                os.rename(filename, upload_name)
+                sample.add_attachment(upload_name)
+                files_to_delete.append(upload_name)
+    
+        sample.props.analysed = True
+        sample.save()
+        
+    for filename in set(files_to_delete):
+        try:
+            os.remove(filename)
+        except FileNotFoundError:
+            continue
+
 
 LOG_FILENAME = 'pybis_script.log'
 logging.basicConfig(
@@ -193,11 +261,12 @@ if not o.is_session_active():
 
 
 logging.info('-----------Mapping session starting------------')
-for pro in ['antibodies', 'resistance', 'metagenomics', 'plasmids', 'other']:
+for pro in ['antibodies', 'resistance', 'metagenomics', 'plasmids', 'other', 'retroseq']:
     general_mapping(pro)
 logging.info('-----------Mapping session finished------------')
 logging.info('* * * * * * * * * * * * * * * * * * * * * * * *')
 time.sleep(300)
+
 logging.info('-----------Analysis session starting-----------')
 
 # Fetch all resistance samples that are mapped
@@ -217,65 +286,29 @@ samples_to_analyse = list(rtm - rta)[:analyses_per_run]
 logging.info('Analysis will proceed on %d samples', len(samples_to_analyse))
 
 files_to_delete = []  # store files that will be deleted at the end
-for sample_id in tqdm(samples_to_analyse, file=tqdm_out):
-    sample = o.get_sample(sample_id)
-    virus = sample.props.virus
-    sample_name = sample.props.sample_name
-    parents = sample.get_parents()
-    assert len(parents) == 1
-    parent = parents[0]  # MISEQ_SAMPLE
-    grandparents = parent.get_parents()
-    assert len(grandparents) == 1
-    grandpa = grandparents[0]  # MISEQ_RUN
-    try:
-        rd = parent.get_datasets()
-        logging.info('Datasets found. Sample: %s - virus: %s', sample.code, virus)
-    except ValueError:
-        logging.warning('No datasets')
-        sample.props.analysed = True
-        sample.save()
-        continue
-    ds_code1 = str(rd[0].permId)
-    dataset = o.get_dataset(ds_code1)
-
-    # run minvar on dataset, i.e. on the fastq file therein
-    minvar_files = run_exe(dataset, 'minvar')
-    for filename, v in minvar_files.items():
-        fh = open(filename, 'wb')
-        fh.write(v)
-        fh.close()
-        # add molis number into filename
-        root, ext = os.path.splitext(filename)
-        upload_name = '%s_%s%s' % (root, sample_name, ext)
-        os.rename(filename, upload_name)
-        sample.add_attachment(upload_name)
-        # add cns_ambiguous_molis_number.fasta as attachment to MISEQ_RUN
-        if upload_name.startswith('cns_ambiguous'):
-            grandpa.add_attachment(upload_name)
-            grandpa.save()
-        files_to_delete.append(upload_name)
-
-    # on HIV only, run v3seq too
-    if virus == 'HIV-1':
-        v3seq_files = run_exe(dataset, 'v3seq')
-        for filename, v in v3seq_files.items():
-            fh = open(filename, 'wb')
-            fh.write(v)
-            fh.close()
-            # add molis number into filename
-            root, ext = os.path.splitext(filename)
-            upload_name = '%s_%s%s' % (root, sample_name, ext)
-            os.rename(filename, upload_name)
-            sample.add_attachment(upload_name)
-            files_to_delete.append(upload_name)
-
-    sample.props.analysed = True
-    sample.save()
-
-for filename in set(files_to_delete):
-    try:
-        os.remove(filename)
-    except FileNotFoundError:
-        continue
+run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete)
 logging.info('-----------Analysis session finished-----------')
+
+time.sleep(300)
+logging.info('-----------RETROSEQ Analysis session starting-----------')
+# Fetch all retroseq samples that are mapped
+res_test_mapped = o.get_experiment('/IMV/RETROSEQ/RESISTANCE_TESTS').get_samples(mapped=True)
+rtm = set(res_test_mapped.df['identifier'])
+# All resistance samples that have already been analyzed
+try:
+    res_test_analysed = o.get_experiment('/IMV/RETROSEQ/RESISTANCE_TESTS').get_samples(mapped=True, analysed=True)
+    rta = set(res_test_analysed.df['identifier'])
+except ValueError:
+    rta = set()
+# res_test_samples = [o.get_sample('/IMV/170803_M02081_0226_000000000-BCJY4-1_RESISTANCE')]
+logging.info('Found %d mapped samples', len(rtm))
+logging.info('Found %d analysed samples', len(rta))
+# samples that need to be analyzed, but this script will only do a maximum number of analysis each time it's called
+samples_to_analyse = list(rtm - rta)[:analyses_per_run]
+logging.info('RETROSEQ Analysis will proceed on %d samples', len(samples_to_analyse))
+
+files_to_delete = []  # store files that will be deleted at the end
+run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete)
+logging.info('-----------RETROSEQ Analysis session finished-----------')
+
 o.logout()
