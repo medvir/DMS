@@ -296,6 +296,9 @@ write_resistance_test(){
     apl=${sample_line[15]}
 
     run_name=$(basename "$rundir")
+
+    ## change the following line for retroseq
+
     echo "Writing properties files for RESISTANCE_TEST RUN:${run_name} SAMPLE:${sample_name}"
 
     ### write properties file
@@ -350,6 +353,9 @@ write_retroseq_resistance_test(){
     apl=${sample_line[15]}
 
     run_name=$(basename "$rundir")
+
+    ## change the following line for retroseq
+
     echo "Writing properties files for RESISTANCE_TEST RUN:${run_name} SAMPLE:${sample_name}"
 
     ### write properties file
@@ -362,17 +368,21 @@ write_retroseq_resistance_test(){
         printf "VIRAL_LOAD=%s\n" "$viral_load"
         printf "APL=%s\n" "$apl"
     } > "$prop_file"
-    
+
+    ## Change HERE
     dst="${datamoverDST}/${run_name}-${sample_number}_RESISTANCE"
     rsync -a --rsync-path="mkdir -p $dst && rsync" "$prop_file" "ozagor@datamover:$dst"
     # save rsync exit status, if 0 then success
     rsync1=$?
 
+    ## Change HERE
     prop_file=dataset.properties
     {
         printf "SPACE = IMV\n"
+        ## Change HERE
         printf "PROJECT = RETROSEQ\n"
         printf "EXPERIMENT = RESISTANCE_TESTS\n"
+        ## Change HERE
         printf "SAMPLE = %s-%s_RESISTANCE\n" "${run_name}" "${sample_number}"
         printf "SAMPLE_TYPE = RESISTANCE_TEST\n"
         printf "DATASET_TYPE = DATAMOVER_SAMPLE_CREATOR\n"
@@ -382,6 +392,7 @@ write_retroseq_resistance_test(){
     rsync2=$?
 
     if [ "$rsync1" -eq "0" ] && [ "$rsync2" -eq "0" ]; then
+        ## Change HERE
         ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}-${sample_number}_RESISTANCE" </dev/null
     else
         echo -e "WATCH OUT: touching the void! $rsync1 $rsync2"
@@ -463,6 +474,7 @@ process_runs(){
             ((s+=1))
 
         ### [Data] section values
+        ## HERE ADD RETROSEQ and write_retroseq_resistance_test
         elif [[ $section == "[Data]" && ${line[1]} && $s -gt 0 ]]
         then
 
@@ -487,7 +499,7 @@ process_runs(){
                 ;;
               Retroseq)
                 retro_sample=true
-                write_retroseq_resistance_test line[@]  
+                write_retroseq_resistance_test line[@]
               esac
             ((s+=1))
         fi
@@ -527,6 +539,7 @@ process_runs(){
         echo "WRITING RESISTANCE RUN"
         write_miseq_run "${run_name}_RESISTANCE" Resistance
     fi
+    ## HERE
     if [ "$retro_sample" = true ]; then
         echo "WRITING RETROSEQ RUN"
         write_miseq_run "${run_name}_RETROSEQ" Retroseq
