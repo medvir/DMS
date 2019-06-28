@@ -297,6 +297,8 @@ write_resistance_test(){
     apl=${sample_line[15]}
 
     run_name=$(basename "$rundir")
+    
+    ## change the following line for retroseq
 
     echo "Writing properties files for RESISTANCE_TEST RUN:${run_name} SAMPLE:${sample_name}"
 
@@ -337,6 +339,68 @@ write_resistance_test(){
 
 }
 
+write_retroseq_resistance_test(){
+
+    declare -a sample_line=("${!1}")
+
+    sample_number=${sample_line[0]}
+    sample_name=${sample_line[1]}
+    #sample_project=${sample_line[8]}
+    #Description=${sample_line[9]}
+    virus=${sample_line[10]}
+    genotype=${sample_line[11]}
+    target=${sample_line[12]}
+    viral_load=${sample_line[13]}
+    apl=${sample_line[15]}
+
+    run_name=$(basename "$rundir")
+    
+    ## change the following line for retroseq
+
+    echo "Writing properties files for RESISTANCE_TEST RUN:${run_name} SAMPLE:${sample_name}"
+
+    ### write properties file
+    prop_file=sample.properties
+    {
+        printf "SAMPLE_NAME=%s\n" "$sample_name"
+        printf "VIRUS=%s\n" "$virus"
+        printf "TARGET_REGION=%s\n" "$target"
+        printf "GENOTYPE=%s\n" "$genotype"
+        printf "VIRAL_LOAD=%s\n" "$viral_load"
+        printf "APL=%s\n" "$apl"
+    } > "$prop_file"
+    
+    ## Change HERE
+    dst="${datamoverDST}/${run_name}-${sample_number}_RESISTANCE"
+    rsync -a --rsync-path="mkdir -p $dst && rsync" "$prop_file" "ozagor@datamover:$dst"
+    # save rsync exit status, if 0 then success
+    rsync1=$?
+
+    ## Change HERE
+    prop_file=dataset.properties
+    {
+        printf "SPACE = IMV\n"
+        ## Change HERE
+        printf "PROJECT = RETROSEQ\n"
+        printf "EXPERIMENT = RESISTANCE_TESTS\n"
+        ## Change HERE
+        printf "SAMPLE = %s-%s_RESISTANCE\n" "${run_name}" "${sample_number}"
+        printf "SAMPLE_TYPE = RESISTANCE_TEST\n"
+        printf "DATASET_TYPE = DATAMOVER_SAMPLE_CREATOR\n"
+    } > "$prop_file"
+
+    rsync -a "$prop_file" "ozagor@datamover:$dst"
+    rsync2=$?
+
+    if [ "$rsync1" -eq "0" ] && [ "$rsync2" -eq "0" ]; then
+        ## Change HERE
+        ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}-${sample_number}_RESISTANCE" </dev/null
+    else
+        echo -e "WATCH OUT: touching the void! $rsync1 $rsync2"
+    fi
+
+}
+
 process_runs(){
     # read the samples sheet,
     # save info found in [Header] and [Reads] in global variables
@@ -360,6 +424,7 @@ process_runs(){
     r=0
     s=0
     res_sample=false
+    retro_sample=false
     meta_sample=false
     plasm_sample=false
     anti_sample=false
@@ -410,6 +475,7 @@ process_runs(){
             ((s+=1))
 
         ### [Data] section values
+        ## HERE ADD RETROSEQ and write_retroseq_resistance_test
         elif [[ $section == "[Data]" && ${line[1]} && $s -gt 0 ]]
         then
 
@@ -432,6 +498,9 @@ process_runs(){
                 res_sample=true
                 write_resistance_test line[@]
                 ;;
+              Retroseq)
+                retro_sample=true
+                write_retroseq_resistance_test line[@]  
               esac
             ((s+=1))
         fi
@@ -470,6 +539,11 @@ process_runs(){
     if [ "$res_sample" = true ]; then
         echo "WRITING RESISTANCE RUN"
         write_miseq_run "${run_name}_RESISTANCE" Resistance
+    fi
+    ## HERE
+    if [ "$retro_sample" = true ]; then
+        echo "WRITING RETROSEQ RUN"
+        write_miseq_run "${run_name}_RETROSEQ" Retroseq
     fi
 
     # reset [Header] and [Reads] information
