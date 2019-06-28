@@ -1,0 +1,3 @@
+MAILTO=schmutz.stefan@virology.uzh.ch
+# backup every monday at 1 AM
+0 1 * * mon /cygdrive/c/Users/sbsuser/DMS/BackupScripts/backup_script.sh
