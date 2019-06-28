@@ -2,3 +2,4 @@
 openBIS/17*/Data/Intensities/BaseCalls/*.fastq.gz
 .vscode/
 openBIS/backup2timavo.log
+BackupScripts/backup.log
