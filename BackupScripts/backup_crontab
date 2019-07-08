@@ -1,3 +1,2 @@
-MAILTO=schmutz.stefan@virology.uzh.ch
-# backup every monday at 1 AM
+# backup every monday at 1 AM (for MiSeq2 replace 1 AM with 3 AM)
 0 1 * * mon /cygdrive/c/Users/sbsuser/DMS/BackupScripts/backup_script.sh
