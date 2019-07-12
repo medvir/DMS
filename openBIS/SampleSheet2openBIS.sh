@@ -4,6 +4,7 @@
 incomingdir=/cygdrive/D/Illumina/MiSeqOutput
 timavoDST=/data/MiSeq
 datamoverDST=data/outgoing
+logdir=/cygdrive/c/Users/sbsuser/DMS/openBIS
 
 # define these globally so no need to pass it as a function parameter
 headers='undefined'
@@ -575,7 +576,7 @@ for rundir in "$incomingdir"/1*; do
     echo -e "\033[1;31m================================================================================\033[0m"
     echo "Now syncing:" "$rundir"
     process_runs "$rundir"
-done
+done >> "$logdir"/backup2timavo.log 2>> "$logdir"/backup2timavo.err
 
 # copy SampleSheets
-rsync -av --stats --chmod=ug+rwx -p /cygdrive/i/MiSeqSampleSheets "timavo:$timavoDST"
+rsync -av --stats --chmod=ug+rwx -p /cygdrive/i/MiSeqSampleSheets "timavo:$timavoDST" >> "$logdir"/backup2timavo.log 2>> "$logdir"/backup2timavo.err
