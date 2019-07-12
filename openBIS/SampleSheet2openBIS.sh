@@ -4,6 +4,7 @@
 incomingdir=/cygdrive/D/Illumina/MiSeqOutput
 timavoDST=/data/MiSeq
 datamoverDST=data/outgoing
+samplesheetdir=/cygdrive/I/MiSeq/MiSeqSampleSheets
 logdir=/cygdrive/c/Users/sbsuser/DMS/openBIS
 
 # define these globally so no need to pass it as a function parameter
@@ -567,7 +568,7 @@ process_runs(){
 
 }
 
-echo 'GO!'
+echo 'GO!' >> "$logdir"/backup2timavo.log 2>> "$logdir"/backup2timavo.err
 ### main loop over all dirs in $incomingdir starting with "1"
 #for rundir in $(find $incomingdir -type d -name "1*" -depth 1)
 #for rundir in $(ls $incomingdir)
@@ -579,4 +580,4 @@ for rundir in "$incomingdir"/1*; do
 done >> "$logdir"/backup2timavo.log 2>> "$logdir"/backup2timavo.err
 
 # copy SampleSheets
-rsync -av --stats --chmod=ug+rwx -p /cygdrive/i/MiSeqSampleSheets "timavo:$timavoDST" >> "$logdir"/backup2timavo.log 2>> "$logdir"/backup2timavo.err
+rsync -avO --stats --no-perms $samplesheetdir "timavo:$timavoDST" >> "$logdir"/backup2timavo.log 2>> "$logdir"/backup2timavo.err
