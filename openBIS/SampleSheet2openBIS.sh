@@ -97,9 +97,9 @@ write_miseq_sample_zero(){
 
     echo "Syncing to TIMAVO"
     DST2="${timavoDST}/MiSeqOutput/${run_name}/Data/Intensities/BaseCalls/"
-    rsync -a --rsync-path="mkdir -p $DST2 && rsync" "$fastq_file" "timavo:$DST2"
+    rsync -a --chmod=ug+rwx,o+r --rsync-path="mkdir -p $DST2 && rsync" "$fastq_file" "timavo:$DST2"
     if [ -e "$fastq_file_2" ]; then
-        rsync "$fastq_file_2" "timavo:$DST2"
+        rsync --chmod=ug+rwx,o+r "$fastq_file_2" "timavo:$DST2"
     fi
     if [ -e "$index_file" ]; then
         rsync "$index_file" "timavo:$DST2"
@@ -203,9 +203,9 @@ write_miseq_sample(){
     if [[ $timavo == *"y"* ]]; then
         echo "Syncing to TIMAVO"
         DST2="${timavoDST}/MiSeqOutput/${run_name}/Data/Intensities/BaseCalls/"
-        rsync -a --rsync-path="mkdir -p $DST2 && rsync" "$fastq_file" "timavo:$DST2"
+        rsync -a --chmod=ug+rwx,o+r --rsync-path="mkdir -p $DST2 && rsync" "$fastq_file" "timavo:$DST2"
         if [ -e "$fastq_file_2" ]; then
-            rsync "$fastq_file_2" "timavo:$DST2"
+            rsync --chmod=ug+rwx,o+r "$fastq_file_2" "timavo:$DST2"
         fi
         if [ -e "$index_file" ]; then
             rsync "$index_file" "timavo:$DST2"
