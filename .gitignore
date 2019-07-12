@@ -2,4 +2,6 @@
 openBIS/17*/Data/Intensities/BaseCalls/*.fastq.gz
 .vscode/
 openBIS/backup2timavo.log
+openBIS/backup2timavo.err
 BackupScripts/backup.log
+BackupScripts/backup.err
