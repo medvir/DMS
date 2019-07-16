@@ -15,8 +15,9 @@ from pybis import Openbis
 from tqdm import tqdm
 
 minvar_2_save = ['report.md', 'report.pdf', 'merged_muts_drm_annotated.csv', 'minvar.log', 'cns_max_freq.fasta',
-                 'merged_mutations_nt.csv', 'subtype_evidence.csv', 'cns_ambiguous.fasta']
+                 'merged_mutations_nt.csv', 'subtype_evidence.csv', 'cns_ambiguous.fasta', 'mutations_nt_pos_ref_aa.csv']
 v3seq_2_save = ['v3haplotypes.fasta', 'v3seq.log', 'v3cons.fasta']
+runControl_2_save = ['score_report.txt','runko.log']
 analyses_per_run = 20
 
 class TqdmToLogger(io.StringIO):
@@ -143,23 +144,33 @@ def run_exe(ds, exe=None):
     """Run external program and return a dictionary of output files."""
     if exe == 'minvar':
         files_to_save = minvar_2_save
+    elif exe == 'runControl':
+        files_to_save = runControl_2_save
     elif exe == 'v3seq':
         files_to_save = v3seq_2_save
+        
     rdir = os.getcwd()
     with tempfile.TemporaryDirectory() as tmpdirname:
         logging.info('running %s in %s', exe, tmpdirname)
         os.chdir(tmpdirname)
-        for f in list(ds.file_list):
-            if not f.endswith('properties'):
-                fastq_name = f
-        ds.download(destination='.')
-        try:
-            fastq_file = os.path.join(tmpdirname, ds.permId, fastq_name)
-        except UnboundLocalError:  # sometimes fastq files are not present
-            os.chdir(rdir)
-            return {}
-        assert os.path.exists(fastq_file), ' '.join(os.listdir())
-        cml = shlex.split('%s -f %s' % (exe, fastq_file))
+        #Added for runControl, runControl gets the output of minvar as input and
+        # does not need the fastq file from openbis
+        if exe == 'runControl':
+            runCo_input_full_path = os.path.join(rdir, ds)
+            cml = shlex.split('%s -f %s' % (exe, runCo_input_full_path))
+        else:
+            for f in list(ds.file_list):
+                if not f.endswith('properties'):
+                    fastq_name = f
+            ds.download(destination='.')
+            try:
+                fastq_file = os.path.join(tmpdirname, ds.permId, fastq_name)
+            except UnboundLocalError:  # sometimes fastq files are not present
+                os.chdir(rdir)
+                return {}
+            assert os.path.exists(fastq_file), ' '.join(os.listdir())
+            cml = shlex.split('%s -f %s' % (exe, fastq_file))
+            
         with open('/tmp/%s.err' % exe, 'w') as oh:
             subprocess.call(cml, stdout=oh, stderr=subprocess.STDOUT)
         try:
@@ -202,14 +213,33 @@ def run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete):
             fh.close()
             # add molis number into filename
             root, ext = os.path.splitext(filename)
-            upload_name = '%s_%s%s' % (root, sample_name, ext)
+            upload_name  = '%s_%s%s' % (root, sample_name, ext)
             os.rename(filename, upload_name)
             sample.add_attachment(upload_name)
+            
             # add cns_ambiguous_molis_number.fasta as attachment to MISEQ_RUN
             if upload_name.startswith('cns_ambiguous'):
                 grandpa.add_attachment(upload_name)
                 grandpa.save()
             files_to_delete.append(upload_name)
+            
+            if (virus == 'HIV-1' and 'runko' in sample_name.lower() and 
+                upload_name.startswith('mutations_nt_pos_ref_aa')):
+                runCo_input_file = upload_name
+        
+                #runCo_input_file = "mutations_nt_pos_ref_aa.csv"
+                runCo_files = run_exe(runCo_input_file, 'runControl')
+                for filename, v in runCo_files.items():
+                    fh = open(filename, 'wb')
+                    fh.write(v)
+                    fh.close()
+                    root, ext = os.path.splitext(filename)
+                    upload_name  = '%s_%s%s' % (root, sample_name, ext)
+                    os.rename(filename, upload_name)
+                    sample.add_attachment(upload_name)
+                    grandpa.add_attachment(upload_name)
+                    grandpa.save()
+                    files_to_delete.append(upload_name)
     
         # on HIV only, run v3seq too
         if virus == 'HIV-1':
@@ -233,7 +263,6 @@ def run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete):
             os.remove(filename)
         except FileNotFoundError:
             continue
-
 
 LOG_FILENAME = 'pybis_script.log'
 logging.basicConfig(
