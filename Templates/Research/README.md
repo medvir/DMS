@@ -58,7 +58,7 @@ All the predefined lists are located here. If a list needs to be changed, it can
 
 ## Example of use
 ### Amplicon sequencing
-In a two step PCR, you've created amplicons wich contain Illumina sequencing adapters and indices.  
+In a two step PCR, you've created amplicons which contain Illumina sequencing adapters and indices.  
 
 Steps to prepare for sequencing (also described as [Protocol A](http://emea.support.illumina.com/content/dam/illumina-support/documents/documentation/system_documentation/miseq/miseq-denature-dilute-libraries-guide-15039740-10.pdf)):  
 - (Equimolar) pooling of samples all having a unique index combination  
