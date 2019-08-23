@@ -55,3 +55,19 @@ All the predefined lists are located here. If a list needs to be changed, it can
 * In the Formulas Tab open Define Name and change the reference to include the new row  
 
 ![](change_name_list.gif "Example of adding a new Project to the Name list")
+
+## Example of use
+### Amplicon sequencing
+In a two step PCR, you've created amplicons wich contain Illumina sequencing adapters and indices.  
+
+Steps to prepare for sequencing (also described as [Protocol A](http://emea.support.illumina.com/content/dam/illumina-support/documents/documentation/system_documentation/miseq/miseq-denature-dilute-libraries-guide-15039740-10.pdf)):  
+- (Equimolar) pooling of samples all having a unique index combination  
+- Dilute pool to 4 nM in water or 10 mM Tris-HCl, pH 8.5 (there's a [pooling calculator from Illumina](https://support.illumina.com/help/pooling-calculator/pooling-calculator.htm))  
+- Thaw the sequencing cartridge also including HT1 Buffer and prepare the MiSeq for sequencing  
+- Combine 5 µL library (4 nM) with 5 µL NaOH (0.2 M)  
+- Vortex briefly and centrifuge  
+- Incubate at room temperature for 5 minutes  
+- Add 990 μL HT1, this results in 1 mL of a 20 pM denatured library  
+- Dilute denatured 20 pM library and add PhiX control depending on the complexity of the library and MiSeq reagent kit version  
+- Load 600 μL library into the sequencing cartridge  
+- Save the filled samplesheet as <MS-Nr.>.csv (important: delimiter symbol must be comma) on the server: `130.60.191.116/Research/Common/Equipment/MiSeq/MiSeqSampleSheets/`
