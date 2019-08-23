@@ -70,4 +70,4 @@ Steps to prepare for sequencing (also described as [Protocol A](http://emea.supp
 - Add 990 μL HT1, this results in 1 mL of a 20 pM denatured library  
 - Dilute denatured 20 pM library and add PhiX control depending on the complexity of the library and MiSeq reagent kit version  
 - Load 600 μL library into the sequencing cartridge  
-- Save the filled samplesheet as <MS-Nr.>.csv (important: delimiter symbol must be comma) on the server: `130.60.191.116/Research/Common/Equipment/MiSeq/MiSeqSampleSheets/5
+- Save the filled samplesheet as <MS-Nr.>.csv (important: delimiter symbol must be comma) on the server: `130.60.191.116/Research/Common/Equipment/MiSeq/MiSeqSampleSheets/`
