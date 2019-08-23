@@ -39,7 +39,7 @@ Sample_Well: *free text (can be left blank)*
 I7_Index_ID: *ID of the indexprimer used*  
 index: *I7 index sequence (hint: if your I7_Index_ID is within the "Defined Lists" worksheet, the corresponding sequence will be displayed automatically)*  
 I5_Index_ID: *ID of the indexprimer used*  
-index2: *I7 index sequence (hint: if your I5_Index_ID is within the "Defined Lists" worksheet, the corresponding sequence will be displayed automatically)*  
+index2: *I5 index sequence (hint: if your I5_Index_ID is within the "Defined Lists" worksheet, the corresponding sequence will be displayed automatically)*  
 Sample_Project: *select from drop-down list*  
 Description: *free text (can be left blank)*  
 virus: *free text (can be left blank)*  
@@ -70,4 +70,4 @@ Steps to prepare for sequencing (also described as [Protocol A](http://emea.supp
 - Add 990 μL HT1, this results in 1 mL of a 20 pM denatured library  
 - Dilute denatured 20 pM library and add PhiX control depending on the complexity of the library and MiSeq reagent kit version  
 - Load 600 μL library into the sequencing cartridge  
-- Save the filled samplesheet as <MS-Nr.>.csv (important: delimiter symbol must be comma) on the server: `130.60.191.116/Research/Common/Equipment/MiSeq/MiSeqSampleSheets/`
+- Save the filled samplesheet as <MS-Nr.>.csv (important: delimiter symbol must be comma) on the server: `130.60.191.116/Research/Common/Equipment/MiSeq/MiSeqSampleSheets/5
