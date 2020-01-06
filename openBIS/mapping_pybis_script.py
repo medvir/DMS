@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import glob
 
 from pybis import Openbis
 from tqdm import tqdm
@@ -18,6 +19,9 @@ minvar_2_save = ['report.md', 'report.pdf', 'merged_muts_drm_annotated.csv', 'mi
                  'merged_mutations_nt.csv', 'subtype_evidence.csv', 'cns_ambiguous.fasta', 'mutations_nt_pos_ref_aa.csv']
 v3seq_2_save = ['v3haplotypes.fasta', 'v3seq.log', 'v3cons.fasta']
 runControl_2_save = ['score_report.txt','runko.log']
+
+smaltalign_2_save = ['/home/ubuntu/SmaltAlign/reference.fasta']
+
 analyses_per_run = 20
 
 class TqdmToLogger(io.StringIO):
@@ -48,7 +52,7 @@ def general_mapping(project=None):
     """
     logging.info('Mapping called for project %s', project)
     p_code = project.upper()
-    valid_projects = ['RESISTANCE', 'METAGENOMICS', 'PLASMIDS', 'OTHER', 'ANTIBODIES', 'RETROSEQ']
+    valid_projects = ['RESISTANCE', 'METAGENOMICS', 'PLASMIDS', 'OTHER', 'ANTIBODIES', 'RETROSEQ', 'CONSENSUS']
     if p_code not in valid_projects:
         sys.exit('Choose a valid project: %s' % ','.join(valid_projects))
 
@@ -57,7 +61,10 @@ def general_mapping(project=None):
     type_names = ['MISEQ_RUN', 'MISEQ_SAMPLE']
     if p_code == 'RESISTANCE' or p_code == 'RETROSEQ' :
         type_names.append('RESISTANCE_TEST')
-
+    
+    if p_code == 'CONSENSUS':
+        type_names.append('CONSENSUS_INFO')
+    
     # dict with a list of samples from each experiment in this project
     samples_dict = {}
     for type_name in type_names:
@@ -121,7 +128,16 @@ def general_mapping(project=None):
             else:
                 logging.warning('sample %s already mapped', resi_sample_id)
         
-
+        elif p_code == 'CONSENSUS':
+            cons_sample_id = '%s_CONSENSUS' % miseq_sample_id
+            cons_sample = o.get_sample(cons_sample_id)
+            if not cons_sample.props.mapped or cons_sample.props.mapped is None:
+                cons_sample.add_parents(miseq_sample_id)
+                cons_sample.props.mapped = True
+                cons_sample.save()
+                logging.debug('mapping sample %s', cons_sample_id)
+            else:
+                logging.warning('sample %s already mapped', cons_sample_id)
 
 def run_child(cmd):
     """Use subrocess.check_output to run an external program with arguments."""
@@ -148,8 +164,11 @@ def run_exe(ds, exe=None):
         files_to_save = runControl_2_save
     elif exe == 'v3seq':
         files_to_save = v3seq_2_save
+    elif exe == 'smaltalign':
+        files_to_save = smaltalign_2_save
         
     rdir = os.getcwd()
+    cml_wts=''
     with tempfile.TemporaryDirectory() as tmpdirname:
         logging.info('running %s in %s', exe, tmpdirname)
         os.chdir(tmpdirname)
@@ -158,6 +177,13 @@ def run_exe(ds, exe=None):
         if exe == 'runControl':
             runCo_input_full_path = os.path.join(rdir, ds)
             cml = shlex.split('%s -f %s' % (exe, runCo_input_full_path))
+        elif exe == 'smaltalign':
+            runSMALT_input_full_path = os.path.join(rdir, ds)
+            #reference_file = glob.glob("*.fasta")[0]
+            #cml = shlex.split('%s -r %s %s' % (exe, reference_file, runSMALT_input_full_path))
+            cml = shlex.split('%s -r /home/ubuntu/SmaltAlign/reference.fasta %s' % (exe, runSMALT_input_full_path))
+            cml_wts = shlex.split('sudo Rscript /home/ubuntu/SmaltAlign/wts.R %s' %(rdir))
+            cml_wts_majority = shlex.split('sudo Rscript /home/ubuntu/SmaltAlign/wts_majority.R %s' %(rdir))
         else:
             for f in list(ds.file_list):
                 if not f.endswith('properties'):
@@ -173,12 +199,19 @@ def run_exe(ds, exe=None):
             
         with open('/tmp/%s.err' % exe, 'w') as oh:
             subprocess.call(cml, stdout=oh, stderr=subprocess.STDOUT)
+            if cml_wts:
+                subprocess.call(cml_wts, stdout=oh, stderr=subprocess.STDOUT)
+                subprocess.call(cml_wts_majority, stdout=oh, stderr=subprocess.STDOUT)
         try:
             logging.info('%s finished, copying files', exe)
             saved_files = {fn: open(fn, 'rb').read() for fn in files_to_save}
+            if cml_wts:
+                saved_files.update({fn: open(fn, 'rb').read() for fn in glob.glob('*WTS.fasta')})
+                
         except FileNotFoundError:
             logging.warning('%s finished with an error, saving %s.err', exe, exe)
             saved_files = {'%s.err' % exe: open('/tmp/%s.err' % exe, 'rb').read()}
+                
     os.chdir(rdir)
     return saved_files
 
@@ -264,6 +297,51 @@ def run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete):
         except FileNotFoundError:
             continue
 
+def run_smaltalign(o, samples_to_analyse, tqdm_out, files_to_delete):
+    
+    for sample_id in tqdm(samples_to_analyse, file=tqdm_out):
+        sample = o.get_sample(sample_id)
+        virus = sample.props.virus
+        sample_name = sample.props.sample_name
+        parents = sample.get_parents()
+        assert len(parents) == 1
+        parent = parents[0]  # MISEQ_SAMPLE
+        grandparents = parent.get_parents()
+        assert len(grandparents) == 1
+        try:
+            rd = parent.get_datasets()
+            logging.info('Datasets found. Sample: %s - virus: %s', sample.code, virus)
+        except ValueError:
+            logging.warning('No datasets')
+            sample.props.analysed = True
+            sample.save()
+            continue
+        ds_code1 = str(rd[0].permId)
+        dataset = o.get_dataset(ds_code1)
+    
+        # run smaltalign on dataset, i.e. on the fastq file therein
+        smaltalign_files = run_exe(dataset, 'smaltalign')
+        for filename, v in smaltalign_files.items():
+            fh = open(filename, 'wb')
+            fh.write(v)
+            fh.close()
+            # add molis number into filename
+            root, ext = os.path.splitext(filename)
+            upload_name  = '%s_%s%s' % (root, sample_name, ext)
+            os.rename(filename, upload_name)
+            sample.add_attachment(upload_name)
+            files_to_delete.append(upload_name)
+    
+        sample.props.analysed = True
+        sample.save()
+        
+    for filename in set(files_to_delete):
+        try:
+            os.remove(filename)
+        except FileNotFoundError:
+            continue
+
+
 LOG_FILENAME = 'pybis_script.log'
 logging.basicConfig(
     filename=LOG_FILENAME, level=logging.INFO,
@@ -290,13 +368,13 @@ if not o.is_session_active():
 
 
 logging.info('-----------Mapping session starting------------')
-for pro in ['antibodies', 'resistance', 'metagenomics', 'plasmids', 'other', 'retroseq']:
+for pro in ['antibodies', 'resistance', 'metagenomics', 'plasmids', 'other', 'retroseq', 'consensus']:
     general_mapping(pro)
 logging.info('-----------Mapping session finished------------')
 logging.info('* * * * * * * * * * * * * * * * * * * * * * * *')
 time.sleep(300)
 
-logging.info('-----------Analysis session starting-----------')
+logging.info('-----------MinVar Analysis session starting-----------')
 
 # Fetch all resistance samples that are mapped
 res_test_mapped = o.get_experiment('/IMV/RESISTANCE/RESISTANCE_TESTS').get_samples(mapped=True)
@@ -316,7 +394,7 @@ logging.info('Analysis will proceed on %d samples', len(samples_to_analyse))
 
 files_to_delete = []  # store files that will be deleted at the end
 run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete)
-logging.info('-----------Analysis session finished-----------')
+logging.info('-----------MinVar Analysis session finished-----------')
 
 time.sleep(300)
 logging.info('-----------RETROSEQ Analysis session starting-----------')
@@ -329,15 +407,37 @@ try:
     rta = set(res_test_analysed.df['identifier'])
 except ValueError:
     rta = set()
-# res_test_samples = [o.get_sample('/IMV/170803_M02081_0226_000000000-BCJY4-1_RESISTANCE')]
+
 logging.info('Found %d mapped samples', len(rtm))
 logging.info('Found %d analysed samples', len(rta))
-# samples that need to be analyzed, but this script will only do a maximum number of analysis each time it's called
+
 samples_to_analyse = list(rtm - rta)[:analyses_per_run]
 logging.info('RETROSEQ Analysis will proceed on %d samples', len(samples_to_analyse))
 
 files_to_delete = []  # store files that will be deleted at the end
 run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete)
 logging.info('-----------RETROSEQ Analysis session finished-----------')
+
+time.sleep(300)
+logging.info('-----------CONSENSUS Analysis session starting-----------')
+# Fetch all consensus samples that are mapped
+res_test_mapped = o.get_experiment('/IMV/CONSENSUS/CONSENSUS_INFO').get_samples(mapped=True)
+rtm = set(res_test_mapped.df['identifier'])
+# All consensus samples that have already been analyzed
+try:
+    res_test_analysed = o.get_experiment('/IMV/CONSENSUS/CONSENSUS_INFO').get_samples(mapped=True, analysed=True)
+    rta = set(res_test_analysed.df['identifier'])
+except ValueError:
+    rta = set()
+
+logging.info('Found %d mapped samples', len(rtm))
+logging.info('Found %d analysed samples', len(rta))
+
+samples_to_analyse = list(rtm - rta)[:analyses_per_run]
+logging.info('CONSENSUS Analysis will proceed on %d samples', len(samples_to_analyse))
+
+files_to_delete = []  # store files that will be deleted at the end
+run_smaltalign(o, samples_to_analyse, tqdm_out, files_to_delete)
+logging.info('-----------CONSENSUS Analysis session finished-----------')
 
 o.logout()
