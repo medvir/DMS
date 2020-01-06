@@ -572,7 +572,7 @@ echo 'GO!' >> "$logdir"/backup2timavo.log 2>> "$logdir"/backup2timavo.err
 ### main loop over all dirs in $incomingdir starting with "1"
 #for rundir in $(find $incomingdir -type d -name "1*" -depth 1)
 #for rundir in $(ls $incomingdir)
-for rundir in "$incomingdir"/1*; do
+for rundir in "$incomingdir"/*; do
     [[ -d "$rundir" ]] || continue
     echo -e "\033[1;31m================================================================================\033[0m"
     echo "Now syncing:" "$rundir"
