@@ -11,16 +11,19 @@ import sys
 import tempfile
 import time
 import glob
-
+import shutil
 from pybis import Openbis
 from tqdm import tqdm
+import PyPDF2
 
 minvar_2_save = ['report.md', 'report.pdf', 'merged_muts_drm_annotated.csv', 'minvar.log', 'cns_max_freq.fasta',
                  'merged_mutations_nt.csv', 'subtype_evidence.csv', 'cns_ambiguous.fasta', 'mutations_nt_pos_ref_aa.csv']
 v3seq_2_save = ['v3haplotypes.fasta', 'v3seq.log', 'v3cons.fasta']
 runControl_2_save = ['score_report.txt','runko.log']
 
-smaltalign_2_save = ['/home/ubuntu/SmaltAlign/reference.fasta']
+smaltalign_2_save = ['reference.fasta']
+smaltalign_ref_path='/home/ubuntu/SmaltAlign/reference.fasta'
+smaltalign_exe_path='/home/ubuntu/SmaltAlign'
 
 analyses_per_run = 20
 
@@ -59,11 +62,8 @@ def general_mapping(project=None):
     logging.info('We are here in project %s', p_code)
     # define experiments list
     type_names = ['MISEQ_RUN', 'MISEQ_SAMPLE']
-    if p_code == 'RESISTANCE' or p_code == 'RETROSEQ' :
+    if p_code == 'RESISTANCE' or p_code == 'RETROSEQ' or p_code == 'CONSENSUS':
         type_names.append('RESISTANCE_TEST')
-    
-    if p_code == 'CONSENSUS':
-        type_names.append('CONSENSUS_INFO')
     
     # dict with a list of samples from each experiment in this project
     samples_dict = {}
@@ -164,7 +164,7 @@ def run_exe(ds, exe=None):
         files_to_save = runControl_2_save
     elif exe == 'v3seq':
         files_to_save = v3seq_2_save
-    elif exe == 'smaltalign':
+    elif exe == 'smaltalign_indel':
         files_to_save = smaltalign_2_save
         
     rdir = os.getcwd()
@@ -177,13 +177,6 @@ def run_exe(ds, exe=None):
         if exe == 'runControl':
             runCo_input_full_path = os.path.join(rdir, ds)
             cml = shlex.split('%s -f %s' % (exe, runCo_input_full_path))
-        elif exe == 'smaltalign':
-            runSMALT_input_full_path = os.path.join(rdir, ds)
-            #reference_file = glob.glob("*.fasta")[0]
-            #cml = shlex.split('%s -r %s %s' % (exe, reference_file, runSMALT_input_full_path))
-            cml = shlex.split('%s -r /home/ubuntu/SmaltAlign/reference.fasta %s' % (exe, runSMALT_input_full_path))
-            cml_wts = shlex.split('sudo Rscript /home/ubuntu/SmaltAlign/wts.R %s' %(rdir))
-            cml_wts_majority = shlex.split('sudo Rscript /home/ubuntu/SmaltAlign/wts_majority.R %s' %(rdir))
         else:
             for f in list(ds.file_list):
                 if not f.endswith('properties'):
@@ -195,24 +188,41 @@ def run_exe(ds, exe=None):
                 os.chdir(rdir)
                 return {}
             assert os.path.exists(fastq_file), ' '.join(os.listdir())
-            cml = shlex.split('%s -f %s' % (exe, fastq_file))
+
+            if exe == 'smaltalign_indel':
+                shutil.copy(smaltalign_ref_path,tmpdirname)
+                smaltalign_exe = os.path.join(smaltalign_exe_path,'smaltalign_indel.sh')
+                cml = shlex.split('%s -r reference.fasta %s' % (smaltalign_exe, fastq_file))
+                cml_wts = shlex.split('sudo Rscript /home/ubuntu/SmaltAlign/wts.R %s' %(tmpdirname))
+                cml_wts_majority = shlex.split('sudo Rscript /home/ubuntu/SmaltAlign/wts_majority.R %s' %(tmpdirname))
+                cml_covplot = shlex.split('sudo Rscript /home/ubuntu/SmaltAlign/cov_plot.R %s' %(tmpdirname))
+            else:
+                cml = shlex.split('%s -f %s' % (exe, fastq_file))
             
         with open('/tmp/%s.err' % exe, 'w') as oh:
             subprocess.call(cml, stdout=oh, stderr=subprocess.STDOUT)
             if cml_wts:
                 subprocess.call(cml_wts, stdout=oh, stderr=subprocess.STDOUT)
                 subprocess.call(cml_wts_majority, stdout=oh, stderr=subprocess.STDOUT)
+                subprocess.call(cml_covplot, stdout=oh, stderr=subprocess.STDOUT)
         try:
             logging.info('%s finished, copying files', exe)
             saved_files = {fn: open(fn, 'rb').read() for fn in files_to_save}
             if cml_wts:
                 saved_files.update({fn: open(fn, 'rb').read() for fn in glob.glob('*WTS.fasta')})
-                
+                saved_files.update({fn: open(fn, 'rb').read() for fn in glob.glob('*4_lofreq.vcf') if fn})
+                saved_files.update({fn: open(fn, 'rb').read() for fn in glob.glob('*_lofreq_indel_hq.vcf') if fn})
+                saved_files.update({fn: open(fn, 'rb').read() for fn in glob.glob('*.csv') if fn})
+                pdfFileObj = open('coverage.pdf', 'rb')
+                saved_files.update({'coverage.pdf': PyPDF2.PdfFileReader(pdfFileObj)}) 
+
         except FileNotFoundError:
             logging.warning('%s finished with an error, saving %s.err', exe, exe)
             saved_files = {'%s.err' % exe: open('/tmp/%s.err' % exe, 'rb').read()}
                 
     os.chdir(rdir)
+    logging.warning('saved_files: ')
+    logging.warning(saved_files)
     return saved_files
 
 def run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete):
@@ -308,6 +318,7 @@ def run_smaltalign(o, samples_to_analyse, tqdm_out, files_to_delete):
         parent = parents[0]  # MISEQ_SAMPLE
         grandparents = parent.get_parents()
         assert len(grandparents) == 1
+        grandpa = grandparents[0]
         try:
             rd = parent.get_datasets()
             logging.info('Datasets found. Sample: %s - virus: %s', sample.code, virus)
@@ -320,16 +331,30 @@ def run_smaltalign(o, samples_to_analyse, tqdm_out, files_to_delete):
         dataset = o.get_dataset(ds_code1)
     
         # run smaltalign on dataset, i.e. on the fastq file therein
-        smaltalign_files = run_exe(dataset, 'smaltalign')
+        smaltalign_files = run_exe(dataset, 'smaltalign_indel')
         for filename, v in smaltalign_files.items():
             fh = open(filename, 'wb')
-            fh.write(v)
+            if (filename == 'coverage.pdf'):
+                pdfWriter = PyPDF2.PdfFileWriter()
+                for pageNum in range(v.numPages):
+                    pdfWriter.addPage(v.getPage(pageNum))
+                pdfWriter.write(fh)
+            else:
+                fh.write(v)
             fh.close()
+
             # add molis number into filename
             root, ext = os.path.splitext(filename)
-            upload_name  = '%s_%s%s' % (root, sample_name, ext)
+            if (filename.startswith('coverage') or filename.startswith('reference')):
+                upload_name  = '%s_%s%s' % (sample_name, root, ext)
+            else:
+                upload_name  = filename
+                
             os.rename(filename, upload_name)
             sample.add_attachment(upload_name)
+            if ('coverage' in upload_name or '15_WTS' in upload_name):
+                grandpa.add_attachment(upload_name)
+                grandpa.save()
             files_to_delete.append(upload_name)
     
         sample.props.analysed = True
@@ -372,7 +397,7 @@ for pro in ['antibodies', 'resistance', 'metagenomics', 'plasmids', 'other', 're
     general_mapping(pro)
 logging.info('-----------Mapping session finished------------')
 logging.info('* * * * * * * * * * * * * * * * * * * * * * * *')
-time.sleep(300)
+#time.sleep(300)
 
 logging.info('-----------MinVar Analysis session starting-----------')
 
@@ -396,7 +421,7 @@ files_to_delete = []  # store files that will be deleted at the end
 run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete)
 logging.info('-----------MinVar Analysis session finished-----------')
 
-time.sleep(300)
+#time.sleep(300)
 logging.info('-----------RETROSEQ Analysis session starting-----------')
 # Fetch all retroseq samples that are mapped
 res_test_mapped = o.get_experiment('/IMV/RETROSEQ/RESISTANCE_TESTS').get_samples(mapped=True)
@@ -418,7 +443,7 @@ files_to_delete = []  # store files that will be deleted at the end
 run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete)
 logging.info('-----------RETROSEQ Analysis session finished-----------')
 
-time.sleep(300)
+#time.sleep(300)
 logging.info('-----------CONSENSUS Analysis session starting-----------')
 # Fetch all consensus samples that are mapped
 res_test_mapped = o.get_experiment('/IMV/CONSENSUS/CONSENSUS_INFO').get_samples(mapped=True)
