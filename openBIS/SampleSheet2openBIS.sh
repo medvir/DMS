@@ -448,7 +448,7 @@ write_consensus_info(){
         printf "EXPERIMENT = CONSENSUS_INFO\n"
         ## Change HERE
         printf "SAMPLE = %s-%s_CONSENSUS\n" "${run_name}" "${sample_number}"
-        printf "SAMPLE_TYPE = CONSENSUS_INFO\n"
+        printf "SAMPLE_TYPE = RESISTANCE_TEST\n"
         printf "DATASET_TYPE = DATAMOVER_SAMPLE_CREATOR\n"
     } > "$prop_file"
 

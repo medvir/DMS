@@ -213,6 +213,7 @@ def run_exe(ds, exe=None):
                 saved_files.update({fn: open(fn, 'rb').read() for fn in glob.glob('*4_lofreq.vcf') if fn})
                 saved_files.update({fn: open(fn, 'rb').read() for fn in glob.glob('*_lofreq_indel_hq.vcf') if fn})
                 saved_files.update({fn: open(fn, 'rb').read() for fn in glob.glob('*.csv') if fn})
+		saved_files.update({fn: open(fn, 'rb').read() for fn in glob.glob('*.depth') if fn})
                 pdfFileObj = open('coverage.pdf', 'rb')
                 saved_files.update({'coverage.pdf': PyPDF2.PdfFileReader(pdfFileObj)}) 
 
@@ -352,7 +353,7 @@ def run_smaltalign(o, samples_to_analyse, tqdm_out, files_to_delete):
                 
             os.rename(filename, upload_name)
             sample.add_attachment(upload_name)
-            if ('coverage' in upload_name or '15_WTS' in upload_name):
+            if ('coverage' in upload_name or '15_WTS' in upload_name or '4.depth' in upload_name):
                 grandpa.add_attachment(upload_name)
                 grandpa.save()
             files_to_delete.append(upload_name)
