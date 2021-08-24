@@ -1,10 +1,11 @@
 #!/bin/bash
 
 #set -x  # uncomment for debugging
+
 incomingdir=/cygdrive/D/Illumina/MiSeqOutput
 timavoDST=/data/MiSeq
 datamoverDST=data/outgoing
-samplesheetdir=/cygdrive/I/MiSeq/MiSeqSampleSheets
+samplesheetdir=/cygdrive/I/MiSeq/MiSeqSampleSheets ## Here
 logdir=/cygdrive/c/Users/sbsuser/DMS/openBIS
 
 # define these globally so no need to pass it as a function parameter
@@ -32,7 +33,7 @@ write_miseq_run(){
     # input: run_name space
     # space is Diagnostics or Research
     run_name_here=$1
-
+    echo "In write_miseq_run $run_name_here"
     datenum=${run_name_here:0:6}
     YYYY=20${datenum:0:2}
     MM=${datenum:2:2}
@@ -91,11 +92,15 @@ write_miseq_sample_zero(){
     sample_number=0
     sample_name='Undetermined'
     run_name="$(basename $rundir)"
+    last_alignment_dir="$(ls -td ${incomingdir}/${run_name}/Alignment* | head -1 | awk -F/ '{print $NF}')"
+    fastq_dir="$(ls -td ${incomingdir}/${run_name}/${last_alignment_dir}/* | head -1 | awk -F/ '{print $NF}')"
 
-    fastq_file=$incomingdir/$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_R1_001.fastq.gz
-    fastq_file_2=$incomingdir/$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_R2_001.fastq.gz
-    index_file=$incomingdir/$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_I1_001.fastq.gz
-    index_file_2=$incomingdir/$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_I2_001.fastq.gz
+    fastq_file=$incomingdir/$run_name/${last_alignment_dir}/${fastq_dir}/Fastq/${sample_name}_S${sample_number}_L001_R1_001.fastq.gz  # find and replace Data/Intensities/BaseCalls
+    fastq_file_2=$incomingdir/$run_name/${last_alignment_dir}/${fastq_dir}/Fastq/${sample_name}_S${sample_number}_L001_R2_001.fastq.gz
+    index_file=$incomingdir/$run_name/${last_alignment_dir}/${fastq_dir}/Fastq/${sample_name}_S${sample_number}_L001_I1_001.fastq.gz
+    index_file_2=$incomingdir/$run_name/${last_alignment_dir}/${fastq_dir}/Fastq/${sample_name}_S${sample_number}_L001_I2_001.fastq.gz
+
+    echo "in write_miseq_sample_zero, run name: $run_name, alignment dir: ${last_alignment_dir}, fastq dir: ${fastq_dir}"
 
     echo "Syncing to TIMAVO"
     DST2="${timavoDST}/MiSeqOutput/${run_name}/Data/Intensities/BaseCalls/"
@@ -196,11 +201,15 @@ write_miseq_sample(){
     timavo=${sample_line[14]}
 
     run_name="$(basename $rundir)"
+    last_alignment_dir="$(ls -td ${incomingdir}/${run_name}/Alignment* | head -1 | awk -F/ '{print $NF}')"
+    fastq_dir="$(ls -td ${incomingdir}/${run_name}/${last_alignment_dir}/* | head -1 | awk -F/ '{print $NF}')"
 
-    fastq_file=$incomingdir/$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_R1_001.fastq.gz
-    fastq_file_2=$incomingdir/$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_R2_001.fastq.gz
-    index_file=$incomingdir/$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_I1_001.fastq.gz
-    index_file_2=$incomingdir/$run_name/Data/Intensities/BaseCalls/${sample_name}_S${sample_number}_L001_I2_001.fastq.gz
+    fastq_file=$incomingdir/$run_name/${last_alignment_dir}/${fastq_dir}/Fastq/${sample_name}_S${sample_number}_L001_R1_001.fastq.gz    # find and replace Data/Intensities/BaseCalls
+    fastq_file_2=$incomingdir/$run_name/${last_alignment_dir}/${fastq_dir}/Fastq/${sample_name}_S${sample_number}_L001_R2_001.fastq.gz
+    index_file=$incomingdir/$run_name/${last_alignment_dir}/${fastq_dir}/Fastq/${sample_name}_S${sample_number}_L001_I1_001.fastq.gz
+    index_file_2=$incomingdir/$run_name/${last_alignment_dir}/${fastq_dir}/Fastq/${sample_name}_S${sample_number}_L001_I2_001.fastq.gz
+
+    echo "in write_miseq_sample, run name: $run_name, alignment dir: ${last_alignment_dir}, fastq dir: ${fastq_dir}"
 
     if [[ $timavo == *"y"* ]]; then
         echo "Syncing to TIMAVO"
@@ -481,7 +490,14 @@ process_runs(){
     ### remove spaces in sample sheet
     #sed -e "s/ /_/g" < "$rundir/Data/Intensities/BaseCalls/SampleSheet.csv" > sample_sheet.tmp
     # sample sheets are now created with Stefan's template: no need to remove them anymore
-    cp "$rundir/SampleSheet.csv" sample_sheet.tmp
+    #cp "$rundir/SampleSheet.csv" sample_sheet.tmp  # Here
+    # get sample sheet name from runParameter.xml file
+    #Sample_Sheet=$(grep -A 1 ReagentKitRFIDTag "$rundir/runParameters.xml" | grep SampleSheetName | sed 's/^.*<SampleSheetName>//' | sed 's/<\/SampleSheetName>//')
+    Sample_Sheet_tmp=$(cat "$rundir/RunParameters.xml" | grep SampleSheetName | sed 's/^.*<SampleSheetName>//' | sed 's/<\/SampleSheetName>//')
+    Sample_Sheet=`echo $Sample_Sheet_tmp | sed 's/\\r//g'`
+    cp "$samplesheetdir/$Sample_Sheet.csv" sample_sheet.tmp
+    chmod 777 sample_sheet.tmp
+    echo "In process_runs, sample sheet: ${Sample_Sheet} "
     # count_openbis=$(grep -c openbis sample_sheet.tmp)
     ### counters for read 1/2 and samples
     r=0
@@ -510,8 +526,12 @@ process_runs(){
         ### [Header] section
         elif [[ $section == "[Header]" && ${line[1]} ]]
         then
-            declare "${line[0]}=${line[1]}"
-
+            if [[ "${line[0]}" == "Experiment Name" ]]; then
+                Experiment_Name=${line[1]}
+                echo "Experiment_Name line: $Experiment_Name , 0: ${line[0]}, 1: ${line[1]}"
+            else
+                declare "${line[0]}=${line[1]}"
+            fi
         ### [Reads] section for read 1
         elif [[ $section == "[Reads]" && ${line[0]} =~ ^[0-9]+$ && $r -eq 0 ]]
         then
@@ -577,13 +597,16 @@ process_runs(){
 
     echo "Syncing SampleSheet to timavo"
     run_name=$(basename "$rundir")
+    #last_alignment_dir="ls -td ${incomingdir}/${run_name}/* | head -1 | awk -F/ '{print $NF}'"
+    #fastq_dir="ls -td ${incomingdir}/${run_name}/${last_alignment_dir}/* | head -1 | awk -F/ '{print $NF}'"
+    #smpshdst="${timavoDST}/MiSeqOutput/${run_name}/${last_alignment_dir}/${fastq_dir}/Fastq" #Data/Intensities/BaseCalls/"
     smpshdst="${timavoDST}/MiSeqOutput/${run_name}/Data/Intensities/BaseCalls/"
     rsync -av --chmod=ug+rwx --rsync-path="mkdir -p $smpshdst && rsync" sample_sheet.tmp "timavo:$smpshdst/SampleSheet.csv"
     rm sample_sheet.tmp
 
     # get sample sheet name from runParameter.xml file and save runParameter.xml file with the sample sheet name
-    Sample_Sheet=$(grep -A 1 ReagentKitRFIDTag "$rundir/runParameters.xml" | grep SerialNumber | sed 's/^.*<SerialNumber>//' | sed 's/<\/SerialNumber>//')
-    rsync -av --stats --chmod=ug+rwx -p "$rundir/runParameters.xml" "timavo:$timavoDST/MiSeqRunParameters/${Sample_Sheet}.xml"
+    Sample_Sheet=$(cat "$rundir/RunParameters.xml" | grep SampleSheetName | sed 's/^.*<SampleSheetName>//' | sed 's/<\/SampleSheetName>//')
+    rsync -av --stats --chmod=ug+rwx -p "$rundir/RunParameters.xml" "timavo:$timavoDST/MiSeqRunParameters/${Sample_Sheet}.xml"
 
     # if any sample was X then write Miseq run sample with PROJECT = X
     if [ "$anti_sample" = true ]; then
@@ -649,7 +672,7 @@ for rundir in "$incomingdir"/*; do
     echo -e "\033[1;31m================================================================================\033[0m"
     echo "Now syncing:" "$rundir"
     process_runs "$rundir"
-done >> "$logdir"/backup2timavo.log 2>> "$logdir"/backup2timavo.err
+done >> "$logdir"/backup2timavo_new.log 2>> "$logdir"/backup2timavo_new.err
 
 # copy SampleSheets
 rsync -avO --stats --no-perms $samplesheetdir "timavo:$timavoDST" >> "$logdir"/backup2timavo.log 2>> "$logdir"/backup2timavo.err
