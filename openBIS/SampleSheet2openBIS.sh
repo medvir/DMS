@@ -672,7 +672,7 @@ for rundir in "$incomingdir"/*; do
     echo -e "\033[1;31m================================================================================\033[0m"
     echo "Now syncing:" "$rundir"
     process_runs "$rundir"
-done >> "$logdir"/backup2timavo_new.log 2>> "$logdir"/backup2timavo_new.err
+done >> "$logdir"/backup2timavo.log 2>> "$logdir"/backup2timavo.err
 
 # copy SampleSheets
 rsync -avO --stats --no-perms $samplesheetdir "timavo:$timavoDST" >> "$logdir"/backup2timavo.log 2>> "$logdir"/backup2timavo.err
