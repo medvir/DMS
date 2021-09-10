@@ -13,7 +13,7 @@ The SampleSheet consists of four sections. The **bold values** are default (but 
 #### [Header]
 IEMFileVersion: **4**  
 Investigator_Name: *your name*  
-Experiment_Name: *free text*  
+Experiment Name: *free text*  
 Date: *date when you start the sequencing run*  
 Workflow: **GenerateFASTQ**  
 Application: **FASTQ Only**  
