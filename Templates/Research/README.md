@@ -13,7 +13,7 @@ The SampleSheet consists of four sections. The **bold values** are default (but 
 #### [Header]
 IEMFileVersion: **4**  
 Investigator_Name: *your name*  
-Experiment_Name: *free text*  
+Experiment Name: *free text*  
 Date: *date when you start the sequencing run*  
 Workflow: **GenerateFASTQ**  
 Application: **FASTQ Only**  
@@ -42,7 +42,7 @@ I5_Index_ID: *ID of the indexprimer used*
 index2: *I5 index sequence (hint: if your I5_Index_ID is within the "Defined Lists" worksheet, the corresponding sequence will be displayed automatically)*  
 Sample_Project: *select from drop-down list*  
 Description: *free text (can be left blank)*  
-virus: *free text (can be left blank)*  
+virus: *free text (can be left blank but needs a specified value if Sample_Project == "Consensus", e.g. "SARS-CoV-2")*  
 genotype: *free text (can be left blank)*  
 target: *free text (can be left blank)*  
 viral_load: *free text (can be left blank)*  
