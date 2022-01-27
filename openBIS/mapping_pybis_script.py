@@ -213,7 +213,7 @@ def run_exe(ds, exe=None):
                 saved_files.update({fn: open(fn, 'rb').read() for fn in glob.glob('*4_lofreq.vcf') if fn})
                 saved_files.update({fn: open(fn, 'rb').read() for fn in glob.glob('*_lofreq_indel_hq.vcf') if fn})
                 saved_files.update({fn: open(fn, 'rb').read() for fn in glob.glob('*.csv') if fn})
-		saved_files.update({fn: open(fn, 'rb').read() for fn in glob.glob('*.depth') if fn})
+                saved_files.update({fn: open(fn, 'rb').read() for fn in glob.glob('*1.depth') if fn})
                 pdfFileObj = open('coverage.pdf', 'rb')
                 saved_files.update({'coverage.pdf': PyPDF2.PdfFileReader(pdfFileObj)}) 
 
@@ -353,7 +353,7 @@ def run_smaltalign(o, samples_to_analyse, tqdm_out, files_to_delete):
                 
             os.rename(filename, upload_name)
             sample.add_attachment(upload_name)
-            if ('coverage' in upload_name or '15_WTS' in upload_name or '4.depth' in upload_name):
+            if ('coverage' in upload_name or '15_WTS' in upload_name):
                 grandpa.add_attachment(upload_name)
                 grandpa.save()
             files_to_delete.append(upload_name)
@@ -383,9 +383,9 @@ handler = logging.handlers.RotatingFileHandler(LOG_FILENAME, maxBytes=1E7, backu
 logger.addHandler(handler)
 
 # open the session first
-o = Openbis('https://s3itdata.uzh.ch', verify_certificates=True)
+o = Openbis('https://openbis.virology.uzh.ch/openbis/', verify_certificates=True)
 if not o.is_session_active():
-    o = Openbis('https://s3itdata.uzh.ch', verify_certificates=False)
+    o = Openbis('https://openbis.virology.uzh.ch/openbis/', verify_certificates=False)
     config = configparser.ConfigParser()
     config.read(os.path.expanduser('~/.pybis/cred.ini'))
     username = config['credentials']['username']
@@ -394,11 +394,12 @@ if not o.is_session_active():
 
 
 logging.info('-----------Mapping session starting------------')
+
 for pro in ['antibodies', 'resistance', 'metagenomics', 'plasmids', 'other', 'retroseq', 'consensus']:
     general_mapping(pro)
 logging.info('-----------Mapping session finished------------')
 logging.info('* * * * * * * * * * * * * * * * * * * * * * * *')
-#time.sleep(300)
+time.sleep(300)
 
 logging.info('-----------MinVar Analysis session starting-----------')
 
@@ -422,7 +423,7 @@ files_to_delete = []  # store files that will be deleted at the end
 run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete)
 logging.info('-----------MinVar Analysis session finished-----------')
 
-#time.sleep(300)
+time.sleep(300)
 logging.info('-----------RETROSEQ Analysis session starting-----------')
 # Fetch all retroseq samples that are mapped
 res_test_mapped = o.get_experiment('/IMV/RETROSEQ/RESISTANCE_TESTS').get_samples(mapped=True)
@@ -444,7 +445,7 @@ files_to_delete = []  # store files that will be deleted at the end
 run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete)
 logging.info('-----------RETROSEQ Analysis session finished-----------')
 
-#time.sleep(300)
+time.sleep(300)
 logging.info('-----------CONSENSUS Analysis session starting-----------')
 # Fetch all consensus samples that are mapped
 res_test_mapped = o.get_experiment('/IMV/CONSENSUS/CONSENSUS_INFO').get_samples(mapped=True)
