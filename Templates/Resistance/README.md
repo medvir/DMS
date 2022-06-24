@@ -47,7 +47,7 @@ By pressing this button, several tests are performed directly on the MiSeq Sampl
 * Sample_Name only contains numbers (0-9), letters (a-z, A-Z) or dashes (-)
 * I7 and I5_Index_ID is within the I7 and I5_Index_ID list
 * index and index2 is within I7 and I5_Index list
-* Sample_Project is within Sample_Project list ("Resistance" or "Other")
+* Sample_Project is within Sample_Project list
 * Virus is within Virus list (only if Sample_Project == "Resistance")
 * genotype is within Genotyp list (only if Sample_Project == "Resistance")
 * target is within Target list (only if Sample_Project == "Resistance")
