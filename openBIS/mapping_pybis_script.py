@@ -228,6 +228,8 @@ def run_exe(ds, exe=None):
 
 def run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete):
     
+    global minvar_grandpa 
+    upload_analysis_files_grandpa_ls = []
     for sample_id in tqdm(samples_to_analyse, file=tqdm_out):
         sample = o.get_sample(sample_id)
         virus = sample.props.virus
@@ -237,7 +239,9 @@ def run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete):
         parent = parents[0]  # MISEQ_SAMPLE
         grandparents = parent.get_parents()
         assert len(grandparents) == 1
-        grandpa = grandparents[0]  # MISEQ_RUN
+        global minvar_grandpa
+        minvar_grandpa = grandparents[0]  # MISEQ_RUN
+        
         try:
             rd = parent.get_datasets()
             logging.info('Datasets found. Sample: %s - virus: %s', sample.code, virus)
@@ -248,7 +252,8 @@ def run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete):
             continue
         ds_code1 = str(rd[0].permId)
         dataset = o.get_dataset(ds_code1)
-    
+        upload_analysis_files_ls = []
+        #upload_analysis_files_grandpa_ls = []
         # run minvar on dataset, i.e. on the fastq file therein
         minvar_files = run_exe(dataset, 'minvar')
         for filename, v in minvar_files.items():
@@ -259,12 +264,15 @@ def run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete):
             root, ext = os.path.splitext(filename)
             upload_name  = '%s_%s%s' % (root, sample_name, ext)
             os.rename(filename, upload_name)
-            sample.add_attachment(upload_name)
+            upload_analysis_files_ls.append(upload_name)
+            #sample.add_attachment(upload_name)
             
             # add cns_ambiguous_molis_number.fasta as attachment to MISEQ_RUN
             if upload_name.startswith('cns_ambiguous'):
-                grandpa.add_attachment(upload_name)
-                grandpa.save()
+                #grandpa.add_attachment(upload_name)
+                #grandpa.save()
+                upload_analysis_files_grandpa_ls.append(upload_name)
+            
             files_to_delete.append(upload_name)
             
             if (virus == 'HIV-1' and 'runko' in sample_name.lower() and 
@@ -280,9 +288,11 @@ def run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete):
                     root, ext = os.path.splitext(filename)
                     upload_name  = '%s_%s%s' % (root, sample_name, ext)
                     os.rename(filename, upload_name)
-                    sample.add_attachment(upload_name)
-                    grandpa.add_attachment(upload_name)
-                    grandpa.save()
+                    #sample.add_attachment(upload_name)
+                    upload_analysis_files_ls.append(upload_name)
+                    #grandpa.add_attachment(upload_name)
+                    #grandpa.save()
+                    upload_analysis_files_grandpa_ls.append(upload_name)
                     files_to_delete.append(upload_name)
     
         # on HIV only, run v3seq too
@@ -296,11 +306,29 @@ def run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete):
                 root, ext = os.path.splitext(filename)
                 upload_name = '%s_%s%s' % (root, sample_name, ext)
                 os.rename(filename, upload_name)
-                sample.add_attachment(upload_name)
+                #sample.add_attachment(upload_name)
+                upload_analysis_files_ls.append(upload_name)
                 files_to_delete.append(upload_name)
-    
+        
+        ds_new = o.new_dataset(
+            #experiment = '/IMV/RESISTANCE/RESISTANCE_TESTS',
+            sample = sample,
+            type = 'DATAMOVER_SAMPLE_CREATOR',
+            files = upload_analysis_files_ls,
+            )
+        ds_new.save()
+
         sample.props.analysed = True
         sample.save()
+
+    if upload_analysis_files_grandpa_ls:
+        ds_new_grandpa = o.new_dataset(
+            #experiment = '/IMV/RESISTANCE/RESISTANCE_TESTS',
+            sample = minvar_grandpa,
+            type = 'DATAMOVER_SAMPLE_CREATOR',
+            files = upload_analysis_files_grandpa_ls,
+            )
+        ds_new_grandpa.save()
         
     for filename in set(files_to_delete):
         try:
@@ -309,7 +337,9 @@ def run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete):
             continue
 
 def run_smaltalign(o, samples_to_analyse, tqdm_out, files_to_delete):
-    
+
+    global smalt_grandpa  
+    upload_analysis_files_grandpa_ls = []
     for sample_id in tqdm(samples_to_analyse, file=tqdm_out):
         sample = o.get_sample(sample_id)
         virus = sample.props.virus
@@ -319,7 +349,8 @@ def run_smaltalign(o, samples_to_analyse, tqdm_out, files_to_delete):
         parent = parents[0]  # MISEQ_SAMPLE
         grandparents = parent.get_parents()
         assert len(grandparents) == 1
-        grandpa = grandparents[0]
+        global smalt_grandpa
+        smalt_grandpa = grandparents[0]
         try:
             rd = parent.get_datasets()
             logging.info('Datasets found. Sample: %s - virus: %s', sample.code, virus)
@@ -333,6 +364,8 @@ def run_smaltalign(o, samples_to_analyse, tqdm_out, files_to_delete):
     
         # run smaltalign on dataset, i.e. on the fastq file therein
         smaltalign_files = run_exe(dataset, 'smaltalign_indel')
+        upload_analysis_files_ls = []
+        #upload_analysis_files_grandpa_ls = []
         for filename, v in smaltalign_files.items():
             fh = open(filename, 'wb')
             if (filename == 'coverage.pdf'):
@@ -352,15 +385,34 @@ def run_smaltalign(o, samples_to_analyse, tqdm_out, files_to_delete):
                 upload_name  = filename
                 
             os.rename(filename, upload_name)
-            sample.add_attachment(upload_name)
+            upload_analysis_files_ls.append(upload_name)
+            #sample.add_attachment(upload_name)
             if ('coverage' in upload_name or '15_WTS' in upload_name):
-                grandpa.add_attachment(upload_name)
-                grandpa.save()
+                #grandpa.add_attachment(upload_name)
+                #grandpa.save()
+                upload_analysis_files_grandpa_ls.append(upload_name)
             files_to_delete.append(upload_name)
     
+        ds_new = o.new_dataset(
+            #experiment = '/IMV/RESISTANCE/RESISTANCE_TESTS',
+            sample = sample,
+            type = 'DATAMOVER_SAMPLE_CREATOR',
+            files = upload_analysis_files_ls,
+            )
+        ds_new.save()
+    
         sample.props.analysed = True
-        sample.save()
-        
+        sample.save()    
+
+    if upload_analysis_files_grandpa_ls:
+        ds_new_grandpa = o.new_dataset(
+            #experiment = '/IMV/RESISTANCE/RESISTANCE_TESTS',
+            sample = smalt_grandpa,
+            type = 'DATAMOVER_SAMPLE_CREATOR',
+            files = upload_analysis_files_grandpa_ls,
+            )
+        ds_new_grandpa.save()
+ 
     for filename in set(files_to_delete):
         try:
             os.remove(filename)
@@ -399,7 +451,7 @@ for pro in ['antibodies', 'resistance', 'metagenomics', 'plasmids', 'other', 're
     general_mapping(pro)
 logging.info('-----------Mapping session finished------------')
 logging.info('* * * * * * * * * * * * * * * * * * * * * * * *')
-time.sleep(300)
+#time.sleep(300)
 
 logging.info('-----------MinVar Analysis session starting-----------')
 
@@ -423,7 +475,7 @@ files_to_delete = []  # store files that will be deleted at the end
 run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete)
 logging.info('-----------MinVar Analysis session finished-----------')
 
-time.sleep(300)
+#time.sleep(300)
 logging.info('-----------RETROSEQ Analysis session starting-----------')
 # Fetch all retroseq samples that are mapped
 res_test_mapped = o.get_experiment('/IMV/RETROSEQ/RESISTANCE_TESTS').get_samples(mapped=True)
@@ -445,7 +497,7 @@ files_to_delete = []  # store files that will be deleted at the end
 run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete)
 logging.info('-----------RETROSEQ Analysis session finished-----------')
 
-time.sleep(300)
+#time.sleep(300)
 logging.info('-----------CONSENSUS Analysis session starting-----------')
 # Fetch all consensus samples that are mapped
 res_test_mapped = o.get_experiment('/IMV/CONSENSUS/CONSENSUS_INFO').get_samples(mapped=True)
