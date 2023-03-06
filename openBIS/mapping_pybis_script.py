@@ -21,8 +21,11 @@ minvar_2_save = ['report.md', 'report.pdf', 'merged_muts_drm_annotated.csv', 'mi
 v3seq_2_save = ['v3haplotypes.fasta', 'v3seq.log', 'v3cons.fasta']
 runControl_2_save = ['score_report.txt','runko.log']
 
-smaltalign_2_save = ['reference.fasta']
-smaltalign_ref_path='/home/ubuntu/SmaltAlign/reference.fasta'
+#smaltalign_2_save = []
+
+smaltalign_ref_CMV_dict = {'CMV_UL54':'/home/ubuntu/SmaltAlign/References/CMV_UL54_REF.fasta', 'CMV_UL56':'/home/ubuntu/SmaltAlign/References/CMV_UL56_REF.fasta', 'CMV_UL97':'/home/ubuntu/SmaltAlign/References/CMV_UL97_REF.fasta'}
+smaltalign_ref_path_dict = {'SARS-COV2':'/home/ubuntu/SmaltAlign/References/MN908947_REF.fasta', 'CMV':smaltalign_ref_CMV_dict}
+
 smaltalign_exe_path='/home/ubuntu/SmaltAlign'
 
 analyses_per_run = 20
@@ -156,7 +159,7 @@ def run_child(cmd):
     return output
 
 
-def run_exe(ds, exe=None):
+def run_exe(ds, exe=None, ref=None):
     """Run external program and return a dictionary of output files."""
     if exe == 'minvar':
         files_to_save = minvar_2_save
@@ -165,7 +168,7 @@ def run_exe(ds, exe=None):
     elif exe == 'v3seq':
         files_to_save = v3seq_2_save
     elif exe == 'smaltalign_indel':
-        files_to_save = smaltalign_2_save
+        files_to_save = []#smaltalign_2_save
         
     rdir = os.getcwd()
     cml_wts=''
@@ -190,9 +193,14 @@ def run_exe(ds, exe=None):
             assert os.path.exists(fastq_file), ' '.join(os.listdir())
 
             if exe == 'smaltalign_indel':
+
+                if ref != None:
+                    smaltalign_ref_path = smaltalign_ref_CMV_dict[ref]
+                else:
+                    smaltalign_ref_path = smaltalign_ref_path_dict['SARS-COV2']
                 shutil.copy(smaltalign_ref_path,tmpdirname)
                 smaltalign_exe = os.path.join(smaltalign_exe_path,'smaltalign_indel.sh')
-                cml = shlex.split('%s -r reference.fasta %s' % (smaltalign_exe, fastq_file))
+                cml = shlex.split('%s -r %s %s' % (smaltalign_exe, smaltalign_ref_path, fastq_file))
                 cml_wts = shlex.split('sudo Rscript /home/ubuntu/SmaltAlign/wts.R %s' %(tmpdirname))
                 cml_wts_majority = shlex.split('sudo Rscript /home/ubuntu/SmaltAlign/wts_majority.R %s' %(tmpdirname))
                 cml_covplot = shlex.split('sudo Rscript /home/ubuntu/SmaltAlign/cov_plot.R %s' %(tmpdirname))
@@ -204,19 +212,22 @@ def run_exe(ds, exe=None):
             if cml_wts:
                 subprocess.call(cml_wts, stdout=oh, stderr=subprocess.STDOUT)
                 subprocess.call(cml_wts_majority, stdout=oh, stderr=subprocess.STDOUT)
+                time.sleep(100)
                 subprocess.call(cml_covplot, stdout=oh, stderr=subprocess.STDOUT)
         try:
             logging.info('%s finished, copying files', exe)
             saved_files = {fn: open(fn, 'rb').read() for fn in files_to_save}
             if cml_wts:
-                saved_files.update({fn: open(fn, 'rb').read() for fn in glob.glob('*WTS.fasta')})
+                saved_files.update({fn: open(fn, 'rb').read() for fn in glob.glob('*REF.fasta')})
+                saved_files.update({fn: open(fn, 'rb').read() for fn in glob.glob('*15_WTS.fasta')})
+                saved_files.update({fn: open(fn, 'rb').read() for fn in glob.glob('*50_WTS.fasta')})
                 saved_files.update({fn: open(fn, 'rb').read() for fn in glob.glob('*4_lofreq.vcf') if fn})
                 saved_files.update({fn: open(fn, 'rb').read() for fn in glob.glob('*_lofreq_indel_hq.vcf') if fn})
                 saved_files.update({fn: open(fn, 'rb').read() for fn in glob.glob('*.csv') if fn})
                 saved_files.update({fn: open(fn, 'rb').read() for fn in glob.glob('*1.depth') if fn})
                 pdfFileObj = open('coverage.pdf', 'rb')
                 saved_files.update({'coverage.pdf': PyPDF2.PdfFileReader(pdfFileObj)}) 
-
+                
         except FileNotFoundError:
             logging.warning('%s finished with an error, saving %s.err', exe, exe)
             saved_files = {'%s.err' % exe: open('/tmp/%s.err' % exe, 'rb').read()}
@@ -363,61 +374,159 @@ def run_smaltalign(o, samples_to_analyse, tqdm_out, files_to_delete):
         dataset = o.get_dataset(ds_code1)
     
         # run smaltalign on dataset, i.e. on the fastq file therein
-        smaltalign_files = run_exe(dataset, 'smaltalign_indel')
-        upload_analysis_files_ls = []
-        #upload_analysis_files_grandpa_ls = []
-        for filename, v in smaltalign_files.items():
-            fh = open(filename, 'wb')
-            if (filename == 'coverage.pdf'):
-                pdfWriter = PyPDF2.PdfFileWriter()
-                for pageNum in range(v.numPages):
-                    pdfWriter.addPage(v.getPage(pageNum))
-                pdfWriter.write(fh)
-            else:
-                fh.write(v)
-            fh.close()
-
-            # add molis number into filename
-            root, ext = os.path.splitext(filename)
-            if (filename.startswith('coverage') or filename.startswith('reference')):
-                upload_name  = '%s_%s%s' % (sample_name, root, ext)
-            else:
-                upload_name  = filename
+        # IF virus is CMV then run it three times with different references
+        if virus.upper() == 'CMV':
+            CMV_ref_dict = smaltalign_ref_path_dict[virus.upper()]
+            for ref in CMV_ref_dict:
+                #ref = 'CMV_UL54', 'CMV_UL56', 'CMV_UL97'
+                smaltalign_files = run_exe(dataset, 'smaltalign_indel',  ref)
+                upload_analysis_files_ls = []
+                upload_analysis_files_grandpa_ls = []
+                for filename, v in smaltalign_files.items():
+                    fh = open(filename, 'wb')
+                    if (filename == 'coverage.pdf'):
+                        pdfWriter = PyPDF2.PdfFileWriter()
+                        for pageNum in range(v.numPages):
+                            pdfWriter.addPage(v.getPage(pageNum))
+                        pdfWriter.write(fh)
+                    else:
+                        fh.write(v)
+                    fh.close()
+        
+                    # add molis number into filename
+                    root, ext = os.path.splitext(filename)
+                    #if filename.startswith('reference'):
+                        
+                    if ('15_WTS' in filename):
+                        new_name = '%s_new%s' % (ref, ext)
+                        f = open(filename, "r")
+                        fw = open(new_name, 'w')
+                        f.readline() # and discard
+                        replacement_line = '>' + root + '_' + ref + '\n'
+                        fw.write(replacement_line)
+                        shutil.copyfileobj(f, fw)
+                        #filename = upload_name
+                        f.close()
+                        fw.close()
+                        upload_name  = '%s_%s%s' % (root, ref, ext)
+                        
+                    elif ('50_WTS' in filename):
+                        
+                        new_name = '%s_new%s' % (ref, ext)
+                        f = open(filename, "r")
+                        fw = open(new_name, 'w')
+                        f.readline() # and discard
+                        replacement_line = '>' + root + '_' + ref + '\n'
+                        fw.write(replacement_line)
+                        shutil.copyfileobj(f, fw)
+                        #filename = tmp_name
+                        f.close()
+                        fw.close()
+                        upload_name  = '%s_%s%s' % (root, ref, ext)
+                        
+                    elif filename.startswith('coverage'):
+                        upload_name  = '%s_%s_%s%s' % (sample_name, ref, root, ext)
+                    elif 'REF.fasta' in filename:
+                        upload_name = '%s_%s' % (root, ext)
+                    else:
+                        upload_name  = '%s_%s%s' % (root, ref, ext)#filename
+                        
+                    if '50_WTS' in filename or '15_WTS' in filename:
+                        os.rename(new_name, upload_name)
+                    else:
+                        os.rename(filename, upload_name)
+                    
+                    upload_analysis_files_ls.append(upload_name)
+                    #sample.add_attachment(upload_name)
+                    
+                    if ('coverage' in upload_name or '15_WTS' in upload_name):
+                        #grandpa.add_attachment(upload_name)
+                        #grandpa.save()
+                        upload_analysis_files_grandpa_ls.append(upload_name)
+                    files_to_delete.append(upload_name)
                 
-            os.rename(filename, upload_name)
-            upload_analysis_files_ls.append(upload_name)
-            #sample.add_attachment(upload_name)
-            if ('coverage' in upload_name or '15_WTS' in upload_name):
-                #grandpa.add_attachment(upload_name)
-                #grandpa.save()
-                upload_analysis_files_grandpa_ls.append(upload_name)
-            files_to_delete.append(upload_name)
-    
-        ds_new = o.new_dataset(
-            #experiment = '/IMV/RESISTANCE/RESISTANCE_TESTS',
-            sample = sample,
-            type = 'DATAMOVER_SAMPLE_CREATOR',
-            files = upload_analysis_files_ls,
-            )
-        ds_new.save()
-    
-        sample.props.analysed = True
-        sample.save()    
+                ds_new = o.new_dataset(
+                    #experiment = '/IMV/RESISTANCE/RESISTANCE_TESTS',
+                    sample = sample,
+                    type = 'DATAMOVER_SAMPLE_CREATOR',
+                    files = upload_analysis_files_ls,
+                    )
+                ds_new.save()
+                sample.props.analysed = True
+                sample.save()
 
-    if upload_analysis_files_grandpa_ls:
-        ds_new_grandpa = o.new_dataset(
-            #experiment = '/IMV/RESISTANCE/RESISTANCE_TESTS',
-            sample = smalt_grandpa,
-            type = 'DATAMOVER_SAMPLE_CREATOR',
-            files = upload_analysis_files_grandpa_ls,
-            )
-        ds_new_grandpa.save()
- 
-    for filename in set(files_to_delete):
-        try:
-            os.remove(filename)
-        except FileNotFoundError:
-            continue
+                if upload_analysis_files_grandpa_ls:
+                    ds_new_grandpa = o.new_dataset(
+                        #experiment = '/IMV/RESISTANCE/RESISTANCE_TESTS',
+                        sample = smalt_grandpa,
+                        type = 'DATAMOVER_SAMPLE_CREATOR',
+                        files = upload_analysis_files_grandpa_ls,
+                        )
+                    ds_new_grandpa.save()
+         
+                for filename in set(files_to_delete):
+                    try:
+                        os.remove(filename)
+                    except FileNotFoundError:
+                        continue
+                    
+        else: #elif virus.upper() == 'SARS_COV2':
+            # assuming that it is SARS_COV2
+            smaltalign_files = run_exe(dataset, 'smaltalign_indel')
+            upload_analysis_files_ls = []
+            #upload_analysis_files_grandpa_ls = []
+            for filename, v in smaltalign_files.items():
+                fh = open(filename, 'wb')
+                if (filename == 'coverage.pdf'):
+                    pdfWriter = PyPDF2.PdfFileWriter()
+                    for pageNum in range(v.numPages):
+                        pdfWriter.addPage(v.getPage(pageNum))
+                    pdfWriter.write(fh)
+                else:
+                    fh.write(v)
+                fh.close()
+    
+                # add molis number into filename
+                root, ext = os.path.splitext(filename)
+                if (filename.startswith('coverage') or filename.startswith('reference')):
+                    upload_name  = '%s_%s%s' % (sample_name, root, ext)
+                else:
+                    upload_name  = filename
+                    
+                os.rename(filename, upload_name)
+                upload_analysis_files_ls.append(upload_name)
+                #sample.add_attachment(upload_name)
+                if ('coverage' in upload_name or '15_WTS' in upload_name):
+                    #grandpa.add_attachment(upload_name)
+                    #grandpa.save()
+                    upload_analysis_files_grandpa_ls.append(upload_name)
+                files_to_delete.append(upload_name)
+                
+            ds_new = o.new_dataset(
+                #experiment = '/IMV/RESISTANCE/RESISTANCE_TESTS',
+                sample = sample,
+                type = 'DATAMOVER_SAMPLE_CREATOR',
+                files = upload_analysis_files_ls,
+                )
+            ds_new.save()
+        
+            sample.props.analysed = True
+            sample.save()    
+
+            if upload_analysis_files_grandpa_ls:
+                ds_new_grandpa = o.new_dataset(
+                    #experiment = '/IMV/RESISTANCE/RESISTANCE_TESTS',
+                    sample = smalt_grandpa,
+                    type = 'DATAMOVER_SAMPLE_CREATOR',
+                    files = upload_analysis_files_grandpa_ls,
+                    )
+                ds_new_grandpa.save()
+         
+            for filename in set(files_to_delete):
+                try:
+                    os.remove(filename)
+                except FileNotFoundError:
+                    continue
 
 
 LOG_FILENAME = 'pybis_script.log'
