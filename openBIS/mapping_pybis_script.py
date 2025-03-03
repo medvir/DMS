@@ -21,12 +21,10 @@ minvar_2_save = ['report.md', 'report.pdf', 'merged_muts_drm_annotated.csv', 'mi
 v3seq_2_save = ['v3haplotypes.fasta', 'v3seq.log', 'v3cons.fasta']
 runControl_2_save = ['score_report.txt','runko.log']
 
-#smaltalign_2_save = []
-
 smaltalign_ref_CMV_dict = {'CMV_UL54':'/home/ubuntu/SmaltAlign/References/CMV_UL54_REF.fasta', 'CMV_UL56':'/home/ubuntu/SmaltAlign/References/CMV_UL56_REF.fasta', 'CMV_UL97':'/home/ubuntu/SmaltAlign/References/CMV_UL97_REF.fasta'}
 smaltalign_ref_path_dict = {'SARS-COV2':'/home/ubuntu/SmaltAlign/References/MN908947_REF.fasta', 'CMV':smaltalign_ref_CMV_dict}
 
-smaltalign_exe_path='/home/ubuntu/SmaltAlign'
+smaltalign_exe_path="smaltalign"
 
 analyses_per_run = 20
 
@@ -168,7 +166,7 @@ def run_exe(ds, exe=None, ref=None):
     elif exe == 'v3seq':
         files_to_save = v3seq_2_save
     elif exe == 'smaltalign_indel':
-        files_to_save = []#smaltalign_2_save
+        files_to_save = []
         
     rdir = os.getcwd()
     cml_wts=''
@@ -199,11 +197,8 @@ def run_exe(ds, exe=None, ref=None):
                 else:
                     smaltalign_ref_path = smaltalign_ref_path_dict['SARS-COV2']
                 shutil.copy(smaltalign_ref_path,tmpdirname)
-                smaltalign_exe = os.path.join(smaltalign_exe_path,'smaltalign_indel.sh')
-                cml = shlex.split('%s -r %s %s' % (smaltalign_exe, smaltalign_ref_path, fastq_file))
-                cml_wts = shlex.split('sudo Rscript /home/ubuntu/SmaltAlign/wts.R %s' %(tmpdirname))
-                cml_wts_majority = shlex.split('sudo Rscript /home/ubuntu/SmaltAlign/wts_majority.R %s' %(tmpdirname))
-                cml_covplot = shlex.split('sudo Rscript /home/ubuntu/SmaltAlign/cov_plot.R %s' %(tmpdirname))
+                cml = shlex.split('%s -r %s -o %s -t 15 -c 1 -d %s' % (smaltalign_exe_path, smaltalign_ref_path, tmpdirname, fastq_file))
+                cml_wts = shlex.split('sudo Rscript /home/ubuntu/SmaltAlign/wts.R %s 50 3' %(tmpdirname))
             else:
                 cml = shlex.split('%s -f %s' % (exe, fastq_file))
             
@@ -211,9 +206,6 @@ def run_exe(ds, exe=None, ref=None):
             subprocess.call(cml, stdout=oh, stderr=subprocess.STDOUT)
             if cml_wts:
                 subprocess.call(cml_wts, stdout=oh, stderr=subprocess.STDOUT)
-                subprocess.call(cml_wts_majority, stdout=oh, stderr=subprocess.STDOUT)
-                time.sleep(100)
-                subprocess.call(cml_covplot, stdout=oh, stderr=subprocess.STDOUT)
         try:
             logging.info('%s finished, copying files', exe)
             saved_files = {fn: open(fn, 'rb').read() for fn in files_to_save}
