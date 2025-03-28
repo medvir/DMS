@@ -198,7 +198,7 @@ def run_exe(ds, exe=None, ref=None):
                     smaltalign_ref_path = smaltalign_ref_path_dict['SARS-COV2']
                 shutil.copy(smaltalign_ref_path,tmpdirname)
                 cml = shlex.split('%s -r %s -o %s -t 15 -c 1 -d %s' % (smaltalign_exe_path, smaltalign_ref_path, tmpdirname, fastq_file))
-                cml_wts = shlex.split('sudo Rscript /home/ubuntu/SmaltAlign/wts.R %s 50 3' %(tmpdirname))
+                cml_wts = shlex.split('Rscript /home/ubuntu/SmaltAlign/wts.R %s 50 3' %(tmpdirname))
             else:
                 cml = shlex.split('%s -f %s' % (exe, fastq_file))
             
