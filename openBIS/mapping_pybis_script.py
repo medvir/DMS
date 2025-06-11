@@ -72,14 +72,14 @@ def general_mapping(project=None):
         logging.debug('Saving samples in experiment %s', type_name)
         # xp_full_name = '/IMV/%s/%s' % (p_code, xp_name)
         # samples = o.get_experiment(xp_full_name).get_samples()
-        samples = o.get_samples(space='IMV', type=type_name)
+        samples = o.get_samples(space='IMV', type=type_name, attrs=['experiment'])
         all_df = samples.df
         all_df['project'] = all_df.apply(lambda row: row['experiment'].split('/')[2], axis=1)
         all_df = all_df[all_df['project'] == p_code]
         all_codes = set(all_df['identifier'])
         try:
             # mapped_samples = o.get_experiment(xp_full_name).get_samples(tags=['mapped'])
-            mapped_samples = o.get_samples(space='IMV', type=type_name, mapped=True)
+            mapped_samples = o.get_samples(space='IMV', type=type_name, attrs=['experiment'], mapped=True)
             mapped_df = mapped_samples.df
             mapped_df['project'] = mapped_df.apply(lambda row: row['experiment'].split('/')[2], axis=1)
             mapped_df = mapped_df[mapped_df['project'] == p_code]
