@@ -9,7 +9,6 @@ import shlex
 import subprocess
 import sys
 import tempfile
-import time
 import glob
 import shutil
 from pybis import Openbis
@@ -70,15 +69,12 @@ def general_mapping(project=None):
     samples_dict = {}
     for type_name in type_names:
         logging.debug('Saving samples in experiment %s', type_name)
-        # xp_full_name = '/IMV/%s/%s' % (p_code, xp_name)
-        # samples = o.get_experiment(xp_full_name).get_samples()
         samples = o.get_samples(space='IMV', type=type_name, attrs=['experiment'])
         all_df = samples.df
         all_df['project'] = all_df.apply(lambda row: row['experiment'].split('/')[2], axis=1)
         all_df = all_df[all_df['project'] == p_code]
         all_codes = set(all_df['identifier'])
         try:
-            # mapped_samples = o.get_experiment(xp_full_name).get_samples(tags=['mapped'])
             mapped_samples = o.get_samples(space='IMV', type=type_name, attrs=['experiment'], mapped=True)
             mapped_df = mapped_samples.df
             mapped_df['project'] = mapped_df.apply(lambda row: row['experiment'].split('/')[2], axis=1)
@@ -104,7 +100,6 @@ def general_mapping(project=None):
         # run_sample can be extracted here, but we are using the 'mapped'
         # property only when samples are given a parent, and run_sample
         # only has children
-        # run_sample = o.get_sample('/IMV/%s' % miseq_run_id)
 
         # create the run -> sample link
         logging.debug('mapping sample %s', miseq_sample_id)
@@ -117,9 +112,6 @@ def general_mapping(project=None):
             #if p_code == 'RESISTANCE':
             resi_sample_id = '%s_RESISTANCE' % miseq_sample_id
             resi_sample = o.get_sample(resi_sample_id)
-            #elif p_code == 'RETROSEQ' :
-            #    resi_sample_id = '%s_RETROSEQ' % miseq_sample_id
-            #    resi_sample = o.get_sample(resi_sample_id)
 
             if not resi_sample.props.mapped or resi_sample.props.mapped is None:
                 resi_sample.add_parents(miseq_sample_id)
@@ -225,8 +217,7 @@ def run_exe(ds, exe=None, ref=None):
             saved_files = {'%s.err' % exe: open('/tmp/%s.err' % exe, 'rb').read()}
                 
     os.chdir(rdir)
-    logging.warning('saved_files: ')
-    logging.warning(saved_files)
+    logging.info('files have been saved')
     return saved_files
 
 def run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete):
@@ -237,6 +228,7 @@ def run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete):
         sample = o.get_sample(sample_id)
         virus = sample.props.virus
         sample_name = sample.props.sample_name
+        original_parents = sample.parents
         parents = sample.get_parents()
         assert len(parents) == 1
         parent = parents[0]  # MISEQ_SAMPLE
@@ -251,6 +243,7 @@ def run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete):
         except ValueError:
             logging.warning('No datasets')
             sample.props.analysed = True
+            sample.parents = original_parents
             sample.save()
             continue
         ds_code1 = str(rd[0].permId)
@@ -268,12 +261,9 @@ def run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete):
             upload_name  = '%s_%s%s' % (root, sample_name, ext)
             os.rename(filename, upload_name)
             upload_analysis_files_ls.append(upload_name)
-            #sample.add_attachment(upload_name)
             
             # add cns_ambiguous_molis_number.fasta as attachment to MISEQ_RUN
             if upload_name.startswith('cns_ambiguous'):
-                #grandpa.add_attachment(upload_name)
-                #grandpa.save()
                 upload_analysis_files_grandpa_ls.append(upload_name)
             
             files_to_delete.append(upload_name)
@@ -291,10 +281,7 @@ def run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete):
                     root, ext = os.path.splitext(filename)
                     upload_name  = '%s_%s%s' % (root, sample_name, ext)
                     os.rename(filename, upload_name)
-                    #sample.add_attachment(upload_name)
                     upload_analysis_files_ls.append(upload_name)
-                    #grandpa.add_attachment(upload_name)
-                    #grandpa.save()
                     upload_analysis_files_grandpa_ls.append(upload_name)
                     files_to_delete.append(upload_name)
     
@@ -309,7 +296,6 @@ def run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete):
                 root, ext = os.path.splitext(filename)
                 upload_name = '%s_%s%s' % (root, sample_name, ext)
                 os.rename(filename, upload_name)
-                #sample.add_attachment(upload_name)
                 upload_analysis_files_ls.append(upload_name)
                 files_to_delete.append(upload_name)
         
@@ -322,11 +308,11 @@ def run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete):
         ds_new.save()
 
         sample.props.analysed = True
+        sample.parents = original_parents
         sample.save()
 
     if upload_analysis_files_grandpa_ls:
         ds_new_grandpa = o.new_dataset(
-            #experiment = '/IMV/RESISTANCE/RESISTANCE_TESTS',
             sample = minvar_grandpa,
             type = 'DATAMOVER_SAMPLE_CREATOR',
             files = upload_analysis_files_grandpa_ls,
@@ -347,6 +333,7 @@ def run_smaltalign(o, samples_to_analyse, tqdm_out, files_to_delete):
         sample = o.get_sample(sample_id)
         virus = sample.props.virus
         sample_name = sample.props.sample_name
+        original_parents = sample.parents
         parents = sample.get_parents()
         assert len(parents) == 1
         parent = parents[0]  # MISEQ_SAMPLE
@@ -360,6 +347,7 @@ def run_smaltalign(o, samples_to_analyse, tqdm_out, files_to_delete):
         except ValueError:
             logging.warning('No datasets')
             sample.props.analysed = True
+            sample.parents = original_parents
             sample.save()
             continue
         ds_code1 = str(rd[0].permId)
@@ -370,7 +358,6 @@ def run_smaltalign(o, samples_to_analyse, tqdm_out, files_to_delete):
         if virus.upper() == 'CMV':
             CMV_ref_dict = smaltalign_ref_path_dict[virus.upper()]
             for ref in CMV_ref_dict:
-                #ref = 'CMV_UL54', 'CMV_UL56', 'CMV_UL97'
                 smaltalign_files = run_exe(dataset, 'smaltalign_indel',  ref)
                 upload_analysis_files_ls = []
                 upload_analysis_files_grandpa_ls = []
@@ -387,7 +374,6 @@ def run_smaltalign(o, samples_to_analyse, tqdm_out, files_to_delete):
         
                     # add molis number into filename
                     root, ext = os.path.splitext(filename)
-                    #if filename.startswith('reference'):
                         
                     if ('15_WTS' in filename):
                         new_name = '%s_new%s' % (ref, ext)
@@ -429,11 +415,8 @@ def run_smaltalign(o, samples_to_analyse, tqdm_out, files_to_delete):
                         os.rename(filename, upload_name)
                     
                     upload_analysis_files_ls.append(upload_name)
-                    #sample.add_attachment(upload_name)
                     
                     if ('coverage' in upload_name or '15_WTS' in upload_name):
-                        #grandpa.add_attachment(upload_name)
-                        #grandpa.save()
                         upload_analysis_files_grandpa_ls.append(upload_name)
                     files_to_delete.append(upload_name)
                 
@@ -445,6 +428,7 @@ def run_smaltalign(o, samples_to_analyse, tqdm_out, files_to_delete):
                     )
                 ds_new.save()
                 sample.props.analysed = True
+                sample.parents = original_parents
                 sample.save()
 
                 if upload_analysis_files_grandpa_ls:
@@ -466,7 +450,6 @@ def run_smaltalign(o, samples_to_analyse, tqdm_out, files_to_delete):
             # assuming that it is SARS_COV2
             smaltalign_files = run_exe(dataset, 'smaltalign_indel')
             upload_analysis_files_ls = []
-            #upload_analysis_files_grandpa_ls = []
             for filename, v in smaltalign_files.items():
                 fh = open(filename, 'wb')
                 if (filename == 'coverage.pdf'):
@@ -487,10 +470,7 @@ def run_smaltalign(o, samples_to_analyse, tqdm_out, files_to_delete):
                     
                 os.rename(filename, upload_name)
                 upload_analysis_files_ls.append(upload_name)
-                #sample.add_attachment(upload_name)
                 if ('coverage' in upload_name or '15_WTS' in upload_name):
-                    #grandpa.add_attachment(upload_name)
-                    #grandpa.save()
                     upload_analysis_files_grandpa_ls.append(upload_name)
                 files_to_delete.append(upload_name)
                 
@@ -503,6 +483,7 @@ def run_smaltalign(o, samples_to_analyse, tqdm_out, files_to_delete):
             ds_new.save()
         
             sample.props.analysed = True
+            sample.parents = original_parents
             sample.save()    
 
             if upload_analysis_files_grandpa_ls:
@@ -552,7 +533,6 @@ for pro in ['antibodies', 'resistance', 'metagenomics', 'plasmids', 'other', 're
     general_mapping(pro)
 logging.info('-----------Mapping session finished------------')
 logging.info('* * * * * * * * * * * * * * * * * * * * * * * *')
-#time.sleep(300)
 
 logging.info('-----------MinVar Analysis session starting-----------')
 
@@ -565,7 +545,7 @@ try:
     rta = set(res_test_analysed.df['identifier'])
 except ValueError:
     rta = set()
-# res_test_samples = [o.get_sample('/IMV/170803_M02081_0226_000000000-BCJY4-1_RESISTANCE')]
+
 logging.info('Found %d mapped samples', len(rtm))
 logging.info('Found %d analysed samples', len(rta))
 # samples that need to be analyzed, but this script will only do a maximum number of analysis each time it's called
@@ -576,7 +556,6 @@ files_to_delete = []  # store files that will be deleted at the end
 run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete)
 logging.info('-----------MinVar Analysis session finished-----------')
 
-#time.sleep(300)
 logging.info('-----------RETROSEQ Analysis session starting-----------')
 # Fetch all retroseq samples that are mapped
 res_test_mapped = o.get_experiment('/IMV/RETROSEQ/RESISTANCE_TESTS').get_samples(mapped=True)
@@ -598,7 +577,6 @@ files_to_delete = []  # store files that will be deleted at the end
 run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete)
 logging.info('-----------RETROSEQ Analysis session finished-----------')
 
-#time.sleep(300)
 logging.info('-----------CONSENSUS Analysis session starting-----------')
 # Fetch all consensus samples that are mapped
 res_test_mapped = o.get_experiment('/IMV/CONSENSUS/CONSENSUS_INFO').get_samples(mapped=True)
