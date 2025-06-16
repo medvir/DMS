@@ -13,7 +13,7 @@ import glob
 import shutil
 from pybis import Openbis
 from tqdm import tqdm
-import PyPDF2
+from PyPDF2 import PdfReader, PdfWriter
 
 minvar_2_save = ['report.md', 'report.pdf', 'merged_muts_drm_annotated.csv', 'minvar.log', 'cns_max_freq.fasta',
                  'merged_mutations_nt.csv', 'subtype_evidence.csv', 'cns_ambiguous.fasta', 'mutations_nt_pos_ref_aa.csv']
@@ -210,7 +210,7 @@ def run_exe(ds, exe=None, ref=None):
                 saved_files.update({fn: open(fn, 'rb').read() for fn in glob.glob('*.csv') if fn})
                 saved_files.update({fn: open(fn, 'rb').read() for fn in glob.glob('*1.depth') if fn})
                 pdfFileObj = open('coverage.pdf', 'rb')
-                saved_files.update({'coverage.pdf': PyPDF2.PdfFileReader(pdfFileObj)}) 
+                saved_files.update({'coverage.pdf': PdfReader(pdfFileObj)}) 
                 
         except FileNotFoundError:
             logging.warning('%s finished with an error, saving %s.err', exe, exe)
@@ -364,9 +364,9 @@ def run_smaltalign(o, samples_to_analyse, tqdm_out, files_to_delete):
                 for filename, v in smaltalign_files.items():
                     fh = open(filename, 'wb')
                     if (filename == 'coverage.pdf'):
-                        pdfWriter = PyPDF2.PdfFileWriter()
-                        for pageNum in range(v.numPages):
-                            pdfWriter.addPage(v.getPage(pageNum))
+                        pdfWriter = PdfWriter()
+                        for pageNum in range(len(v.pages)):
+                            pdfWriter.add_page(v.pages[pageNum])
                         pdfWriter.write(fh)
                     else:
                         fh.write(v)
@@ -453,9 +453,9 @@ def run_smaltalign(o, samples_to_analyse, tqdm_out, files_to_delete):
             for filename, v in smaltalign_files.items():
                 fh = open(filename, 'wb')
                 if (filename == 'coverage.pdf'):
-                    pdfWriter = PyPDF2.PdfFileWriter()
-                    for pageNum in range(v.numPages):
-                        pdfWriter.addPage(v.getPage(pageNum))
+                    pdfWriter = PdfWriter()
+                    for pageNum in range(len(v.pages)):
+                        pdfWriter.add_page(v.pages[pageNum])
                     pdfWriter.write(fh)
                 else:
                     fh.write(v)
