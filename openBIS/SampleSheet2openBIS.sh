@@ -2,11 +2,11 @@
 
 #set -x  # uncomment for debugging
 
-incomingdir=/cygdrive/D/Illumina/MiSeqOutput
+incomingdir=/Volumes/MiSeqi100/MiSeqi100Outputs
 timavoDST=/data/MiSeq
 datamoverDST=data/outgoing
-samplesheetdir=/cygdrive/I/MiSeq/MiSeqSampleSheets ## Here
-logdir=/cygdrive/c/Users/sbsuser/DMS/openBIS
+samplesheetdir=/Volumes/Equipment/MiSeq/MiSeqSampleSheets
+logdir=/Users/gsm_net/DMS/openBIS
 
 # define these globally so no need to pass it as a function parameter
 headers='undefined'

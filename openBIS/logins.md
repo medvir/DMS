@@ -13,3 +13,4 @@
 - [x] Shah Cyril cshah
 - [x] Sarah Wicki sawick
 - [x] Michel Crameri mcrame
+- [x] Judith Bergadà Pijuan
