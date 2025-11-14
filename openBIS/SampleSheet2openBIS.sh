@@ -5,8 +5,8 @@
 incomingdir=/Volumes/MiSeqi100/MiSeqi100Outputs
 timavoDST=/data/MiSeq
 datamoverDST=data/outgoing
-samplesheetdir=/Volumes/Equipment/MiSeq/MiSeqSampleSheets
-logdir=/Users/gsm_net/DMS/openBIS
+samplesheetdir=/Volumes/MiSeqSampleSheets
+logdir=$HOME/DMS/openBIS
 
 # define these globally so no need to pass it as a function parameter
 headers='undefined'
