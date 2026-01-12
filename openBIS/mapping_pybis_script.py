@@ -149,10 +149,13 @@ def run_child(cmd):
     return output
 
 
-def run_exe(ds, exe=None, ref=None):
+def run_exe(ds, exe=None, ref=None, sample_id=None):
     """Run external program and return a dictionary of output files."""
     if exe == 'minvar':
-        files_to_save = minvar_2_save
+        files_to_save = []
+        for fn in minvar_2_save:
+            root, ext = os.path.splitext(fn)
+            files_to_save.append(f"{root}_{sample_id}{ext}")
     elif exe == 'runControl':
         files_to_save = runControl_2_save
     elif exe == 'v3seq':
@@ -251,15 +254,12 @@ def run_minvar(o, samples_to_analyse, tqdm_out, files_to_delete):
         upload_analysis_files_ls = []
         #upload_analysis_files_grandpa_ls = []
         # run minvar on dataset, i.e. on the fastq file therein
-        minvar_files = run_exe(dataset, 'minvar')
+        minvar_files = run_exe(dataset, 'minvar', sample_id=sample_name)
         for filename, v in minvar_files.items():
             fh = open(filename, 'wb')
             fh.write(v)
             fh.close()
-            # add molis number into filename
-            root, ext = os.path.splitext(filename)
-            upload_name  = '%s_%s%s' % (root, sample_name, ext)
-            os.rename(filename, upload_name)
+            upload_name  = filename
             upload_analysis_files_ls.append(upload_name)
             
             # add cns_ambiguous_molis_number.fasta as attachment to MISEQ_RUN
