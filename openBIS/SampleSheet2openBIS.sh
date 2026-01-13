@@ -1,19 +1,17 @@
 #!/bin/bash
 
-#set -x  # uncomment for debugging
+# set -x  # uncomment for debugging
 
 incomingdir=/Volumes/MiSeqi100/MiSeqi100Outputs
 timavoDST=/data/MiSeq
-datamoverDST=data/outgoing
 samplesheetdir=/Volumes/MiSeqSampleSheets
 logdir=$HOME/DMS/openBIS
 
 # define these globally so no need to pass it as a function parameter
 headers='undefined'
 rundir='undefined'
-# IEMFileVersion='undefined'
 Account=''
-Investigator_Name='undefined'
+Operator='undefined'
 Experiment_Name='undefined'
 #Date='undefined'
 Workflow='undefined'
@@ -23,67 +21,45 @@ Assay='undefined'
 Chemistry='undefined'
 Read1=''
 Read2=''
-PhiX='undefined'
+PhiX=''
 RGT_box1='undefined'
 RGT_box2='undefined'
 openbis='n'
 timavo='n'
 
 write_miseq_run(){
-    # input: run_name space
-    # space is Diagnostics or Research
     run_name_here=$1
-    echo "In write_miseq_run $run_name_here"
-    datenum=${run_name_here:0:6}
-    YYYY=20${datenum:0:2}
-    MM=${datenum:2:2}
-    DD=${datenum:4:2}
-
-    echo "Writing properties files for MISEQ_RUN:$1 PROJECT:$2"
-    prop_file=sample.properties
-    {
-        printf "INVESTIGATOR_NAME = %s\n" "$Investigator_Name"
-        printf "EXPERIMENT_NAME = %s\n" "$Experiment_Name"
-        printf "SAMPLE_SHEET_NAME = %s\n" "$Sample_Sheet"
-        printf "ACCOUNT = %s\n" "$Account"
-        printf "DATE = %s-%s-%s\n" "${YYYY}" "${MM}" "${DD}"
-        printf "MISEQ_WORKFLOW = %s\n" "$Workflow"
-        printf "APPLICATION = %s\n" "$Application"
-        printf "ASSAY = %s\n" "$Assay"
-        printf "CHEMISTRY = %s\n" "$Chemistry"
-        printf "READ_1 = %s\n" "$Read1"
-        printf "READ_2 = %s\n" "$Read2"
-        printf "PHIX_CONCENTRATION = %s\n" "$PhiX"
-        printf "RGT_Box_1 = %s\n" "$RGT_box1"
-        printf "RGT_Box_2 = %s\n" "$RGT_box2"
-    } > "$prop_file"
-
-    dst="${datamoverDST}/${run_name_here}"
-    rsync -a --rsync-path="mkdir -p $dst && rsync" "$prop_file" "ozagor@datamover:$dst"
-    # save rsync exit status, if 0 then success
-    rsync1=$?
-
-    ### sample_type MISEQ_RUN
     project_to_write=$2
+    datenum=${run_name_here:0:8}
+    formatted_date="${datenum:0:4}-${datenum:4:2}-${datenum:6:2}"
 
-    prop_file=dataset.properties
+    payload=$(cat <<EOF
     {
-        printf "SPACE = IMV\n"
-        printf "PROJECT = %s\n" "$project_to_write"
-        printf "EXPERIMENT = MISEQ_RUNS\n"
-        printf "SAMPLE = %s\n" "$run_name_here"
-        printf "SAMPLE_TYPE = MISEQ_RUN\n"
-        printf "DATASET_TYPE = DATAMOVER_SAMPLE_CREATOR\n"
-    } > "$prop_file"
-
-    rsync -a "$prop_file" "ozagor@datamover:$dst"
-    rsync2=$?
-    if [ "$rsync1" -eq "0" ] && [ "$rsync2" -eq "0" ]; then
-        ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name_here}" </dev/null
-    else
-        echo -e "WATCH OUT: touching the void! $rsync1 $rsync2"
-    fi
-
+        "space": "IMV",
+        "project": "$project_to_write",
+        "experiment": "MISEQ_RUNS",
+        "sample_code": "${run_name_here#20}",
+        "sample_type": "MISEQ_RUN",
+        "properties": {
+            "INVESTIGATOR_NAME": "$Operator",
+            "EXPERIMENT_NAME": "$Experiment_Name",
+            "SAMPLE_SHEET_NAME": "$Sample_Sheet",
+            "ACCOUNT": "$Account",
+            "DATE": "$formatted_date",
+            "MISEQ_WORKFLOW": "$Workflow",
+            "APPLICATION": "$Application",
+            "ASSAY": "$Assay",
+            "CHEMISTRY": "$Chemistry",
+            "READ_1": "$Read1",
+            "READ_2": "$Read2",
+            "PHIX_CONCENTRATION": "$PhiX",
+            "RGT_Box_1": "$Reagent1",
+            "RGT_Box_2": "$Reagent2"
+        }
+    }
+EOF
+    )
+    python3 openbis_uploader.py "$payload"
 }
 
 
@@ -92,96 +68,51 @@ write_miseq_sample_zero(){
     sample_number=0
     sample_name='Undetermined'
     run_name="$(basename $rundir)"
-    last_alignment_dir="$(ls -td ${incomingdir}/${run_name}/Alignment* | head -1 | awk -F/ '{print $NF}')"
-    fastq_dir="$(ls -td ${incomingdir}/${run_name}/${last_alignment_dir}/* | head -1 | awk -F/ '{print $NF}')"
+    last_alignment_dir="$(ls -td ${incomingdir}/${run_name}/Analysis/* | head -1 | awk -F/ '{print $NF}')"
+    fastq_dir="$(ls -td ${incomingdir}/${run_name}/Analysis/${last_alignment_dir}/Data/BCLConvert/)"
 
-    fastq_file=$incomingdir/$run_name/${last_alignment_dir}/${fastq_dir}/Fastq/${sample_name}_S${sample_number}_L001_R1_001.fastq.gz  # find and replace Data/Intensities/BaseCalls
-    fastq_file_2=$incomingdir/$run_name/${last_alignment_dir}/${fastq_dir}/Fastq/${sample_name}_S${sample_number}_L001_R2_001.fastq.gz
-    index_file=$incomingdir/$run_name/${last_alignment_dir}/${fastq_dir}/Fastq/${sample_name}_S${sample_number}_L001_I1_001.fastq.gz
-    index_file_2=$incomingdir/$run_name/${last_alignment_dir}/${fastq_dir}/Fastq/${sample_name}_S${sample_number}_L001_I2_001.fastq.gz
+    fastq_file=${fastq_dir}/fastq/${sample_name}_S${sample_number}_L001_R1_001.fastq.gz  
+    fastq_file_2=${fastq_dir}/fastq/${sample_name}_S${sample_number}_L001_R2_001.fastq.gz
+    index_file=${fastq_dir}/fastq/${sample_name}_S${sample_number}_L001_I1_001.fastq.gz
+    index_file_2=${fastq_dir}/fastq/${sample_name}_S${sample_number}_L001_I2_001.fastq.gz
 
     echo "in write_miseq_sample_zero, run name: $run_name, alignment dir: ${last_alignment_dir}, fastq dir: ${fastq_dir}"
 
     echo "Syncing to TIMAVO"
-    DST2="${timavoDST}/MiSeqOutput/${run_name}/Data/Intensities/BaseCalls/"
+    DST2="${timavoDST}/MiSeqOutput/${run_name}/"
     rsync -a --chmod=ug+rwx,o+r --rsync-path="mkdir -p $DST2 && rsync" "$fastq_file" "timavo:$DST2"
-    if [ -e "$fastq_file_2" ]; then
-        rsync --chmod=ug+rwx,o+r "$fastq_file_2" "timavo:$DST2"
-    fi
+
     if [ -e "$index_file" ]; then
         rsync "$index_file" "timavo:$DST2"
     fi
-    if [ -e "$index_file_2" ]; then
-        rsync "$index_file_2" "timavo:$DST2"
-    fi
 
-    ### write properties file
-    ### sample_type MISEQ_SAMPLE
-    echo "Writing properties files for MISEQ_SAMPLE ID:${sample_number} NAME:${sample_name}"
-    prop_file=sample.properties
+    ### To OpenBis
+    sample_code="${run_name#20}-${sample_number}"
+
+    payload=$(cat <<EOF
     {
-        printf "SAMPLE_ID=0\n"
-        printf "SAMPLE_NAME=Undetermined\n"
-        printf "SAMPLE_PLATE=\n"
-        printf "SAMPLE_WELL=\n"
-        printf "I7_INDEX_ID=\n"
-        printf "INDEX_1=\n"
-        printf "I5_INDEX_ID=\n"
-        printf "INDEX_2=\n"
-        printf "DESCRIPTION=\n"
-    } > "$prop_file"
-
-    dst="${datamoverDST}/${run_name}-${sample_number}"
-    rsync -a --rsync-path="mkdir -p $dst && rsync" "$prop_file" "ozagor@datamover:$dst"
-    # save rsync exit status, if 0 then success
-    rsync1=$?
-
-    prop_file=dataset.properties
-    {
-        printf "SPACE = IMV\n"
-        printf "PROJECT = METAGENOMICS\n"
-        printf "EXPERIMENT = MISEQ_SAMPLES\n"
-        printf "SAMPLE = %s-%s\n" "${run_name}" "${sample_number}"
-        printf "SAMPLE_TYPE = MISEQ_SAMPLE\n"
-        printf "DATASET_TYPE = FASTQ\n"
-    } > "$prop_file"
-
-    rsync -a "$prop_file" "ozagor@datamover:$dst"
-    rsync2=$?
-
-    rsync3=0
-    if [ -e "$fastq_file" ]; then
-        rsync -a "$fastq_file" "ozagor@datamover:$dst"
-        rsync3=$?
-        # echo "R1 file exists, rsync returns $rsync3"
-    else
-        echo "R1 file does not exist"
-    fi
-
-    rsync4=0
-    if [ -e "$fastq_file_2" ]; then
-        rsync -a "$fastq_file_2" "ozagor@datamover:$dst"
-        rsync4=$?
-        echo "R2 file exists, rsync returns $rsync4"
-    # else
-    #     echo "R2 file does not exist"
-    fi
-
-    if [ "$rsync1" -eq "0" ] && [ "$rsync2" -eq "0" ] && [ "$rsync3" -eq "0" ] && [ "$rsync4" -eq "0" ]; then
-        ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}-${sample_number}" </dev/null
-    else
-        echo -e "WATCH OUT: touching the void! $rsync1 $rsync2 $rsync3 $rsync4"
-    fi
-
+        "space": "IMV",
+        "project": "METAGENOMICS",
+        "experiment": "MISEQ_SAMPLES",
+        "sample_code": "$sample_code",
+        "sample_type": "MISEQ_SAMPLE",
+        "parent_sample": "${run_name}_METAGENOMICS",
+        "dataset_type": "FASTQ",
+        "files": ["$fastq_file"],
+        "properties": {
+            "SAMPLE_ID": "$sample_number",
+            "SAMPLE_NAME": "$sample_name"
+        }
+    }
+EOF
+    )
+    python3 openbis_uploader.py "$payload"
 }
 
 
 write_miseq_sample(){
-    # input is a line in section [Data] of the samples sheet
-    # copy fastq file into $bufferdir/$rundir/S.../ and write dataset.properties
-    # if timavo == y, sync fastq file on timavo too
 
-    declare -a sample_line=("${!1}")
+    declare -a sample_line=("$@")
 
     ### move fastq file into folder
 
@@ -191,286 +122,110 @@ write_miseq_sample(){
     # - remove leadin and trailing whitespaces (first sed)
     # - replace punctuation characters and internal spaces with dashes
     sample_name=$(echo ${sample_line[1]} | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | tr -s '[:punct:] ' '-')
-    sample_plate=${sample_line[2]}
-    sample_well=${sample_line[3]}
-    I7_index_id=${sample_line[4]}
-    index_1=${sample_line[5]}
-    I5_index_id=${sample_line[6]}
-    index_2=${sample_line[7]}
-    description=${sample_line[9]}
-    timavo=${sample_line[14]}
+    I7_index_id=${sample_line[2]}
+    index_1=${sample_line[3]}
+    index_2=${sample_line[4]}
+    timavo=${sample_line[9]}
 
     run_name="$(basename $rundir)"
-    last_alignment_dir="$(ls -td ${incomingdir}/${run_name}/Alignment* | head -1 | awk -F/ '{print $NF}')"
-    fastq_dir="$(ls -td ${incomingdir}/${run_name}/${last_alignment_dir}/* | head -1 | awk -F/ '{print $NF}')"
+    last_alignment_dir="$(ls -td ${incomingdir}/${run_name}/Analysis/* | head -1 | awk -F/ '{print $NF}')"
+    fastq_dir="$(ls -td ${incomingdir}/${run_name}/Analysis/${last_alignment_dir}/Data/BCLConvert/)"
 
-    fastq_file=$incomingdir/$run_name/${last_alignment_dir}/${fastq_dir}/Fastq/${sample_name}_S${sample_number}_L001_R1_001.fastq.gz    # find and replace Data/Intensities/BaseCalls
-    fastq_file_2=$incomingdir/$run_name/${last_alignment_dir}/${fastq_dir}/Fastq/${sample_name}_S${sample_number}_L001_R2_001.fastq.gz
-    index_file=$incomingdir/$run_name/${last_alignment_dir}/${fastq_dir}/Fastq/${sample_name}_S${sample_number}_L001_I1_001.fastq.gz
-    index_file_2=$incomingdir/$run_name/${last_alignment_dir}/${fastq_dir}/Fastq/${sample_name}_S${sample_number}_L001_I2_001.fastq.gz
+    fastq_file=${fastq_dir}/fastq/${sample_name}_S${sample_number}_L001_R1_001.fastq.gz    
+    fastq_file_2=${fastq_dir}/fastq/${sample_name}_S${sample_number}_L001_R2_001.fastq.gz
+    index_file=${fastq_dir}/fastq/${sample_name}_S${sample_number}_L001_I1_001.fastq.gz
+    index_file_2=${fastq_dir}/fastq/${sample_name}_S${sample_number}_L001_I2_001.fastq.gz
 
     echo "in write_miseq_sample, run name: $run_name, alignment dir: ${last_alignment_dir}, fastq dir: ${fastq_dir}"
 
     if [[ $timavo == *"y"* ]]; then
         echo "Syncing to TIMAVO"
-        DST2="${timavoDST}/MiSeqOutput/${run_name}/Data/Intensities/BaseCalls/"
+        DST2="${timavoDST}/MiSeqOutput/${run_name}/"
         rsync -a --chmod=ug+rwx,o+r --rsync-path="mkdir -p $DST2 && rsync" "$fastq_file" "timavo:$DST2"
-        if [ -e "$fastq_file_2" ]; then
-            rsync --chmod=ug+rwx,o+r "$fastq_file_2" "timavo:$DST2"
-        fi
+
         if [ -e "$index_file" ]; then
             rsync "$index_file" "timavo:$DST2"
         fi
-        if [ -e "$index_file_2" ]; then
-            rsync "$index_file_2" "timavo:$DST2"
-        fi
-
-      else
+    else
         echo "Not syncing to TIMAVO"
     fi
 
-    ### write properties file
+    ### To OpenBis
+    sample_code="${run_name#20}-${sample_number}"
+    project="${sample_line[5]}"
 
-    ### sample_type MISEQ_SAMPLE
-    echo "Writing properties files for MISEQ_SAMPLE ID:${sample_number} NAME:${sample_name}"
-    prop_file=sample.properties
+    # Link with the parent
+    project_up=$(echo "$project" | tr '[:lower:]' '[:upper:]')
+    parent_link="${run_name}_${project_up}"
+
+    payload=$(cat <<EOF
     {
-        printf "SAMPLE_ID=%s\n" "${sample_number}"
-        printf "SAMPLE_NAME=%s\n" "${sample_name}"
-        printf "SAMPLE_PLATE=%s\n" "${sample_plate}"
-        printf "SAMPLE_WELL=%s\n" "$sample_well"
-        printf "I7_INDEX_ID=%s\n" "$I7_index_id"
-        printf "INDEX_1=%s\n" "$index_1"
-        printf "I5_INDEX_ID=%s\n" "$I5_index_id"
-        printf "INDEX_2=%s\n" "$index_2"
-        printf "DESCRIPTION=%s\n" "$description"
-    } > "$prop_file"
-
-    dst="${datamoverDST}/${run_name}-${sample_number}"
-    rsync -a --rsync-path="mkdir -p $dst && rsync" "$prop_file" "ozagor@datamover:$dst"
-    # save rsync exit status, if 0 then success
-    rsync1=$?
-
-    Project=${sample_line[8]}
-
-    prop_file=dataset.properties
-    {
-        printf "SPACE = IMV\n"
-        printf "PROJECT = %s\n" "$Project"
-        printf "EXPERIMENT = MISEQ_SAMPLES\n"
-        printf "SAMPLE = %s-%s\n" "${run_name}" "${sample_number}"
-        printf "SAMPLE_TYPE = MISEQ_SAMPLE\n"
-        printf "DATASET_TYPE = FASTQ\n"
-    } > "$prop_file"
-
-    rsync -a "$prop_file" "ozagor@datamover:$dst"
-    rsync2=$?
-
-    rsync3=0
-    if [ -e "$fastq_file" ]; then
-        rsync -a "$fastq_file" "ozagor@datamover:$dst"
-        rsync3=$?
-        # echo "R1 file exists, rsync returns $rsync3"
-    else
-        echo "R1 file does not exist"
-    fi
-
-    rsync4=0
-    if [ -e "$fastq_file_2" ]; then
-        rsync -a "$fastq_file_2" "ozagor@datamover:$dst"
-        rsync4=$?
-        echo "R2 file exists, rsync returns $rsync4"
-    # else
-    #     echo "R2 file does not exist"
-    fi
-
-    if [ "$rsync1" -eq "0" ] && [ "$rsync2" -eq "0" ] && [ "$rsync3" -eq "0" ] && [ "$rsync4" -eq "0" ]; then
-        ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}-${sample_number}" </dev/null
-    else
-        echo -e "WATCH OUT: touching the void! $rsync1 $rsync2 $rsync3 $rsync4"
-    fi
-
+        "space": "IMV",
+        "project": "$project",
+        "experiment": "MISEQ_SAMPLES",
+        "sample_code": "$sample_code",
+        "sample_type": "MISEQ_SAMPLE",
+        "parent_sample": "$parent_link",
+        "dataset_type": "FASTQ",
+        "files": ["$fastq_file"],
+        "properties": {
+            "SAMPLE_ID": "$sample_number",
+            "SAMPLE_NAME": "$sample_name",
+            "SAMPLE_PLATE": "$sample_plate",
+            "SAMPLE_WELL": "$sample_well",
+            "I7_INDEX_ID": "$I7_index_id",
+            "INDEX_1": "$index_1",
+            "INDEX_2": "$index_2",
+            "DESCRIPTION": "$description"
+        }
+    }
+EOF
+    )
+    python3 openbis_uploader.py "$payload"
 }
 
-write_resistance_test(){
-
-    declare -a sample_line=("${!1}")
-
-    sample_number=${sample_line[0]}
-    sample_name=${sample_line[1]}
-    #sample_project=${sample_line[8]}
-    #Description=${sample_line[9]}
-    virus=${sample_line[10]}
-    genotype=${sample_line[11]}
-    target=${sample_line[12]}
-    viral_load=${sample_line[13]}
-    apl=${sample_line[15]}
-
+write_experiment_generic(){
+    declare -a sample_line=("$@")
+    local project_name=$1
+    local exp_name=$2
+    local sample_suffix=$3
+    
     run_name=$(basename "$rundir")
+    sample_number=${sample_line[0]}
 
-    ## change the following line for retroseq
+    sequencing_sample="${run_name#20}-${sample_number}"
+    test_sample="${sequencing_sample}_${sample_suffix}"
 
-    echo "Writing properties files for RESISTANCE_TEST RUN:${run_name} SAMPLE:${sample_name}"
-
-    ### write properties file
-    prop_file=sample.properties
+    payload=$(cat <<EOF
     {
-        printf "SAMPLE_NAME=%s\n" "$sample_name"
-        printf "VIRUS=%s\n" "$virus"
-        printf "TARGET_REGION=%s\n" "$target"
-        printf "GENOTYPE=%s\n" "$genotype"
-        printf "VIRAL_LOAD=%s\n" "$viral_load"
-        printf "APL=%s\n" "$apl"
-    } > "$prop_file"
-
-    dst="${datamoverDST}/${run_name}-${sample_number}_RESISTANCE"
-    rsync -a --rsync-path="mkdir -p $dst && rsync" "$prop_file" "ozagor@datamover:$dst"
-    # save rsync exit status, if 0 then success
-    rsync1=$?
-
-    prop_file=dataset.properties
-    {
-        printf "SPACE = IMV\n"
-        printf "PROJECT = RESISTANCE\n"
-        printf "EXPERIMENT = RESISTANCE_TESTS\n"
-        printf "SAMPLE = %s-%s_RESISTANCE\n" "${run_name}" "${sample_number}"
-        printf "SAMPLE_TYPE = RESISTANCE_TEST\n"
-        printf "DATASET_TYPE = DATAMOVER_SAMPLE_CREATOR\n"
-    } > "$prop_file"
-
-    rsync -a "$prop_file" "ozagor@datamover:$dst"
-    rsync2=$?
-
-    if [ "$rsync1" -eq "0" ] && [ "$rsync2" -eq "0" ]; then
-        ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}-${sample_number}_RESISTANCE" </dev/null
-    else
-        echo -e "WATCH OUT: touching the void! $rsync1 $rsync2"
-    fi
-
+        "space": "IMV",
+        "project": "$project_name",
+        "experiment": "${exp_name}",
+        "sample_code": "$test_sample",
+        "sample_type": "RESISTANCE_TEST",
+        "parent_sample": "$sequencing_sample",
+        "properties": {
+            "SAMPLE_NAME": "${sample_line[1]}",
+            "VIRUS": "${sample_line[6]}",
+            "TARGET_REGION": "${sample_line[7]}",
+            "APL": "${sample_line[8]}"
+        }
+    }
+EOF
+    )
+    python3 openbis_uploader.py "$payload"
 }
 
-write_retroseq_resistance_test(){
-
-    declare -a sample_line=("${!1}")
-
-    sample_number=${sample_line[0]}
-    sample_name=${sample_line[1]}
-    #sample_project=${sample_line[8]}
-    #Description=${sample_line[9]}
-    virus=${sample_line[10]}
-    genotype=${sample_line[11]}
-    target=${sample_line[12]}
-    viral_load=${sample_line[13]}
-    apl=${sample_line[15]}
-
-    run_name=$(basename "$rundir")
-
-    ## change the following line for retroseq
-
-    echo "Writing properties files for RESISTANCE_TEST RUN:${run_name} SAMPLE:${sample_name}"
-
-    ### write properties file
-    prop_file=sample.properties
-    {
-        printf "SAMPLE_NAME=%s\n" "$sample_name"
-        printf "VIRUS=%s\n" "$virus"
-        printf "TARGET_REGION=%s\n" "$target"
-        printf "GENOTYPE=%s\n" "$genotype"
-        printf "VIRAL_LOAD=%s\n" "$viral_load"
-        printf "APL=%s\n" "$apl"
-    } > "$prop_file"
-
-    ## Change HERE
-    dst="${datamoverDST}/${run_name}-${sample_number}_RESISTANCE"
-    rsync -a --rsync-path="mkdir -p $dst && rsync" "$prop_file" "ozagor@datamover:$dst"
-    # save rsync exit status, if 0 then success
-    rsync1=$?
-
-    ## Change HERE
-    prop_file=dataset.properties
-    {
-        printf "SPACE = IMV\n"
-        ## Change HERE
-        printf "PROJECT = RETROSEQ\n"
-        printf "EXPERIMENT = RESISTANCE_TESTS\n"
-        ## Change HERE
-        printf "SAMPLE = %s-%s_RESISTANCE\n" "${run_name}" "${sample_number}"
-        printf "SAMPLE_TYPE = RESISTANCE_TEST\n"
-        printf "DATASET_TYPE = DATAMOVER_SAMPLE_CREATOR\n"
-    } > "$prop_file"
-
-    rsync -a "$prop_file" "ozagor@datamover:$dst"
-    rsync2=$?
-
-    if [ "$rsync1" -eq "0" ] && [ "$rsync2" -eq "0" ]; then
-        ## Change HERE
-        ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}-${sample_number}_RESISTANCE" </dev/null
-    else
-        echo -e "WATCH OUT: touching the void! $rsync1 $rsync2"
-    fi
-
+write_resistance_test() { 
+    write_experiment_generic "RESISTANCE" "RESISTANCE_TESTS" "RESISTANCE" "${@}"; 
 }
 
-write_consensus_info(){
+write_retroseq_resistance_test() { 
+    write_experiment_generic "RETROSEQ" "RESISTANCE_TESTS" "RESISTANCE" "${@}"; 
+}
 
-    declare -a sample_line=("${!1}")
-
-    sample_number=${sample_line[0]}
-    sample_name=${sample_line[1]}
-    #sample_project=${sample_line[8]}
-    #Description=${sample_line[9]}
-    virus=${sample_line[10]}
-    genotype=${sample_line[11]}
-    target=${sample_line[12]}
-    viral_load=${sample_line[13]}
-    apl=${sample_line[15]}
-
-    run_name=$(basename "$rundir")
-
-    ## change the following line for retroseq
-
-    echo "Writing properties files for CONSENSUS_INFO RUN:${run_name} SAMPLE:${sample_name}"
-
-    ### write properties file
-    prop_file=sample.properties
-    {
-        printf "SAMPLE_NAME=%s\n" "$sample_name"
-        printf "VIRUS=%s\n" "$virus"
-        printf "TARGET_REGION=%s\n" "$target"
-        printf "GENOTYPE=%s\n" "$genotype"
-        printf "VIRAL_LOAD=%s\n" "$viral_load"
-        printf "APL=%s\n" "$apl"
-    } > "$prop_file"
-
-    ## Change HERE
-    dst="${datamoverDST}/${run_name}-${sample_number}_CONSENSUS"
-    rsync -a --rsync-path="mkdir -p $dst && rsync" "$prop_file" "ozagor@datamover:$dst"
-    # save rsync exit status, if 0 then success
-    rsync1=$?
-
-    ## Change HERE
-    prop_file=dataset.properties
-    {
-        printf "SPACE = IMV\n"
-        ## Change HERE
-        printf "PROJECT = CONSENSUS\n"
-        printf "EXPERIMENT = CONSENSUS_INFO\n"
-        ## Change HERE
-        printf "SAMPLE = %s-%s_CONSENSUS\n" "${run_name}" "${sample_number}"
-        printf "SAMPLE_TYPE = RESISTANCE_TEST\n"
-        printf "DATASET_TYPE = DATAMOVER_SAMPLE_CREATOR\n"
-    } > "$prop_file"
-
-    rsync -a "$prop_file" "ozagor@datamover:$dst"
-    rsync2=$?
-
-    if [ "$rsync1" -eq "0" ] && [ "$rsync2" -eq "0" ]; then
-        ## Change HERE
-        ssh ozagor@datamover touch "$datamoverDST/.MARKER_is_finished_${run_name}-${sample_number}_CONSENSUS" </dev/null
-    else
-        echo -e "WATCH OUT: touching the void! $rsync1 $rsync2"
-    fi
-
+write_consensus_info() { 
+    write_experiment_generic "CONSENSUS" "CONSENSUS_INFO" "CONSENSUS" "${@}"; 
 }
 
 process_runs(){
@@ -487,13 +242,8 @@ process_runs(){
     # reset headers
     headers='undefined'
 
-    ### remove spaces in sample sheet
-    #sed -e "s/ /_/g" < "$rundir/Data/Intensities/BaseCalls/SampleSheet.csv" > sample_sheet.tmp
-    # sample sheets are now created with Stefan's template: no need to remove them anymore
-    #cp "$rundir/SampleSheet.csv" sample_sheet.tmp  # Here
-    # get sample sheet name from runParameter.xml file
-    #Sample_Sheet=$(grep -A 1 ReagentKitRFIDTag "$rundir/runParameters.xml" | grep SampleSheetName | sed 's/^.*<SampleSheetName>//' | sed 's/<\/SampleSheetName>//')
-    Sample_Sheet_tmp=$(cat "$rundir/RunParameters.xml" | grep SampleSheetName | sed 's/^.*<SampleSheetName>//' | sed 's/<\/SampleSheetName>//')
+    # get sample sheet name
+    Sample_Sheet_tmp=$(cat "$rundir/SampleSheet.csv" | grep InputContainerIdentifier | sed 's/InputContainerIdentifier,//')
     Sample_Sheet=`echo $Sample_Sheet_tmp | sed 's/\\r//g'`
     cp "$samplesheetdir/$Sample_Sheet.csv" sample_sheet.tmp
     chmod 777 sample_sheet.tmp
@@ -515,57 +265,49 @@ process_runs(){
     ### with a newline
     while IFS=',' read -r -a line || [[ -n "$line" ]]
     do
-        # if [[ "$count_openbis" == 0 ]]
-        # then
-        #     break
-        # fi
-        if [[ ${line[0]} =~ ^\[[[:alpha:]]*\] ]]
-        then
+        if [[ ${line[0]} =~ ^\[[[:alpha:]_]*\] ]]; then 
             section=${line[0]}
+        fi
 
         ### [Header] section
-        elif [[ $section == "[Header]" && ${line[1]} ]]
-        then
-            if [[ "${line[0]}" == "Experiment Name" ]]; then
-                Experiment_Name=${line[1]}
+        if [[ $section == "[Header]" && ${line[1]} ]]; then
+            header_value=$(echo "${line[1]}" | tr -d '\r')
+            if [[ "${line[0]}" == "RunName" ]]; then
+                Experiment_Name=${header_value}
                 echo "Experiment_Name line: $Experiment_Name , 0: ${line[0]}, 1: ${line[1]}"
             else
-                declare "${line[0]}=${line[1]}"
+                declare "${line[0]}=${header_value}"
             fi
-        ### [Reads] section for read 1
-        elif [[ $section == "[Reads]" && ${line[0]} =~ ^[0-9]+$ && $r -eq 0 ]]
-        then
-            # [Header] has now been parsed, if openbis != y then stop parsing
-            # this run and go to next
+        ### [Reads] section
+        elif [[ $section == "[Reads]" ]]; then 
+            # Check for openbis=n flag *before* processing any reads info
             if [[ "$openbis" == "n" ]]; then
                 break
             fi
-            r=1
-            # echo $section ${line[0]}
-            Read1=${line[0]}
+            
+            ### [Reads] section for read 1
+            if [[ ${line[0]} == "Read1Cycles" && $r -eq 0 && ${line[1]} =~ ^[0-9]+$ ]]; then
+                r=1
+                Read1=${line[1]}
+            
+            # [Reads] section for read 2
+            elif [[ ${line[0]} == "Read2Cycles" && $r -eq 1 && ${line[1]} =~ ^[0-9]+$ ]]; then
+                r=2
+                Read2=${line[1]}
+            fi
 
-        ### [Reads] section for read 2
-        elif [[ $section == "[Reads]" && ${line[0]} =~ ^[0-9]+$ && $r -eq 1 ]]
-        then
-            r=2
-            # echo $section ${line[0]}
-            Read2=${line[0]}
-
-        ### [Data] section headers
-        elif [[ $section == "[Data]" && ${line[1]} && $s -eq 0 ]]
-        then
+        ### [BCLConvert_Data] section headers
+        elif [[ $section == "[BCLConvert_Data]" && ${line[0]} == "Sample_ID" && $s -eq 0 ]]; then
             headers=( "${line[@]}" )
             echo -e "  Headers found:" "${headers[@]}"
             ((s+=1))
 
-        ### [Data] section values
+        ### [BCLConvert_Data] section values
         ## HERE ADD RETROSEQ and write_retroseq_resistance_test
-        elif [[ $section == "[Data]" && ${line[1]} && $s -gt 0 ]]
-        then
+        elif [[ $section == "[BCLConvert_Data]" && ${line[0]} =~ ^[0-9]+$ && $s -gt 0 ]]; then
+            write_miseq_sample "${line[@]}"
 
-            write_miseq_sample line[@]
-
-            case ${line[8]} in
+            case ${line[5]} in
               Antibodies)
                 anti_sample=true
                 ;;
@@ -580,32 +322,27 @@ process_runs(){
                 ;;
               Resistance)
                 res_sample=true
-                write_resistance_test line[@]
+                write_resistance_test "${line[@]}"
                 ;;
               Retroseq)
                 retro_sample=true
-                write_retroseq_resistance_test line[@]
+                write_retroseq_resistance_test "${line[@]}"
                 ;;
               Consensus)
                 consensus_sample=true
-                write_consensus_info line[@]
+                write_consensus_info "${line[@]}"
               esac
             ((s+=1))
         fi
-
     done < sample_sheet.tmp
 
     echo "Syncing SampleSheet to timavo"
     run_name=$(basename "$rundir")
-    #last_alignment_dir="ls -td ${incomingdir}/${run_name}/* | head -1 | awk -F/ '{print $NF}'"
-    #fastq_dir="ls -td ${incomingdir}/${run_name}/${last_alignment_dir}/* | head -1 | awk -F/ '{print $NF}'"
-    #smpshdst="${timavoDST}/MiSeqOutput/${run_name}/${last_alignment_dir}/${fastq_dir}/Fastq" #Data/Intensities/BaseCalls/"
-    smpshdst="${timavoDST}/MiSeqOutput/${run_name}/Data/Intensities/BaseCalls/"
+    smpshdst="${timavoDST}/MiSeqOutput/${run_name}/"
     rsync -av --chmod=ug+rwx --rsync-path="mkdir -p $smpshdst && rsync" sample_sheet.tmp "timavo:$smpshdst/SampleSheet.csv"
     rm sample_sheet.tmp
 
     # get sample sheet name from runParameter.xml file and save runParameter.xml file with the sample sheet name
-    Sample_Sheet=$(cat "$rundir/RunParameters.xml" | grep SampleSheetName | sed 's/^.*<SampleSheetName>//' | sed 's/<\/SampleSheetName>//')
     rsync -av --stats --chmod=ug+rwx -p "$rundir/RunParameters.xml" "timavo:$timavoDST/MiSeqRunParameters/${Sample_Sheet}.xml"
 
     # if any sample was X then write Miseq run sample with PROJECT = X
@@ -643,7 +380,7 @@ process_runs(){
     fi
 
     # reset [Header] and [Reads] information
-    Investigator_Name='undefined'
+    Operator='undefined'
     Experiment_Name='undefined'
     Sample_Sheet='undefined'
     # Date='undefined'
@@ -654,7 +391,7 @@ process_runs(){
     Chemistry='undefined'
     Read1=''
     Read2=''
-    PhiX='undefined'
+    PhiX=''
     RGT_box1='undefined'
     RGT_box2='undefined'
     openbis='n'
