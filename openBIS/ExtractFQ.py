@@ -16,11 +16,11 @@ config.read(os.path.expanduser('~/.pybis/cred.ini'))
 OPENBIS_URL = 'https://openbis.virology.uzh.ch/openbis/'
 USERNAME = config['credentials']['username']
 PASSWORD = config['credentials']['password']
-DOWNLOAD_DIR = os.path.expanduser('~/IMV2OpenBis/tmp_downloads')
+DOWNLOAD_DIR = os.path.expanduser('/mnt/data/IMV2OpenBis/tmp_downloads')
 OUTPUT_DIR = os.path.expanduser(
-    f'~/IMV2OpenBis/fastq_downloads_{datetime.today().strftime("%Y-%m-%d")}'
+    f'/mnt/data/IMV2OpenBis/fastq_downloads_{datetime.today().strftime("%Y-%m-%d")}'
     )
-SAMPLE_FILE = os.path.expanduser('~/IMV2OpenBis/IMV2OpenBis.txt')
+SAMPLE_FILE = os.path.expanduser('/mnt/data/IMV2OpenBis/IMV2OpenBis.txt')
 
 # Connect to OpenBIS
 o = Openbis(OPENBIS_URL, verify_certificates=True)
@@ -91,7 +91,7 @@ for TARGET_SAMPLE_NAME in target_sample_names:
 df['fastq_files'] = fastq_files_column
 df.dropna(subset=['fastq_files'], inplace = True)
 df.to_csv(
-    os.path.expanduser('~/IMV2OpenBis/IDs_with_fastq.txt'), 
+    os.path.expanduser('/mnt/data/IMV2OpenBis/IDs_with_fastq.txt'), 
     sep='\t', 
     index=False
     )
