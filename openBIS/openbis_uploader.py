@@ -9,7 +9,7 @@ from pybis import Openbis
 # Configuration
 OPENBIS_URL = 'https://openbis.virology.uzh.ch/openbis/'
 config = configparser.ConfigParser()
-config.read(os.path.expanduser('~/.pybis/cred.ini'))
+config.read("C:/cygwin64/home/sbsuser/.pybis/cred.ini")
 USER = config['credentials']['username']
 PASSWORD = config['credentials']['password']
     
@@ -113,13 +113,15 @@ def upload_to_openbis(data):
         existing_datasets = sample.get_datasets() if sample_exists else []
 
         if len(existing_datasets) > 0:
-            print(f"Note: Sample already has {len(existing_datasets)} dataset(s). Skipping FASTQ upload to prevent duplicates.")
-        else:
-            valid_files = [f for f in files if os.path.exists(f)]
-            if valid_files:
-                ds = o.new_dataset(type=data.get('dataset_type', 'FASTQ'), sample=sample, files=valid_files)
-                ds.save()
-                print(f"Uploaded {len(valid_files)} files.")
+            print(f"Trashing {len(existing_datasets)} existing dataset(s) to upload new ones...")
+            for old_ds in existing_datasets:
+                old_ds.delete("Overwriting with new upload")
+
+        valid_files = [f for f in files if os.path.exists(f)]
+        if valid_files:
+            ds = o.new_dataset(type=data.get('dataset_type', 'FASTQ'), sample=sample, files=valid_files)
+            ds.save()
+            print(f"Uploaded {len(valid_files)} files.")
 
     o.logout()
 

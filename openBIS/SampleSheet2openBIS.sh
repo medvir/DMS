@@ -57,7 +57,7 @@ write_miseq_run(){
     }
 EOF
     )
-    python3 openbis_uploader.py "$payload"
+    py "C:\Users\sbsuser\DMS\openBIS\openbis_uploader.py" "$payload"
 }
 
 write_miseq_sample_zero(){
@@ -90,6 +90,7 @@ write_miseq_sample_zero(){
 
     ### To OpenBis
     sample_code="${run_name#20}-${sample_number}"
+    win_fastq_file=$(cygpath -m "$fastq_file")
 
     payload=$(cat <<EOF
     {
@@ -100,7 +101,7 @@ write_miseq_sample_zero(){
         "sample_type": "MISEQ_SAMPLE",
         "parent_sample": "${run_name#20}_METAGENOMICS",
         "dataset_type": "FASTQ",
-        "files": ["$fastq_file"],
+        "files": ["$win_fastq_file"],
         "properties": {
             "SAMPLE_ID": "$sample_number",
             "SAMPLE_NAME": "$sample_name"
@@ -108,7 +109,7 @@ write_miseq_sample_zero(){
     }
 EOF
     )
-    python3 openbis_uploader.py "$payload"
+    py "C:\Users\sbsuser\DMS\openBIS\openbis_uploader.py" "$payload"
 }
 
 write_miseq_sample(){
@@ -169,6 +170,7 @@ write_miseq_sample(){
     # Link with the parent
     project_up=$(echo "$project" | tr '[:lower:]' '[:upper:]')
     parent_link="${run_name#20}_${project_up}"
+    win_fastq_file=$(cygpath -m "$fastq_file")
 
     payload=$(cat <<EOF
     {
@@ -179,7 +181,7 @@ write_miseq_sample(){
         "sample_type": "MISEQ_SAMPLE",
         "parent_sample": "$parent_link",
         "dataset_type": "FASTQ",
-        "files": ["$fastq_file"],
+        "files": ["$win_fastq_file"],
         "properties": {
             "SAMPLE_ID": "$sample_number",
             "SAMPLE_NAME": "$sample_name",
@@ -194,7 +196,7 @@ write_miseq_sample(){
     }
 EOF
     )
-    python3 openbis_uploader.py "$payload"
+    py "C:\Users\sbsuser\DMS\openBIS\openbis_uploader.py" "$payload"
 }
 
 write_experiment_generic(){
@@ -232,7 +234,7 @@ write_experiment_generic(){
     }
 EOF
     )
-    python3 openbis_uploader.py "$payload"
+    py "C:\Users\sbsuser\DMS\openBIS\openbis_uploader.py" "$payload"
 }
 
 write_resistance_test() { 
