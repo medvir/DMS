@@ -6,6 +6,39 @@ incomingdir=/Volumes/MiSeqi100/MiSeqi100Outputs
 timavoDST=/data/MiSeq
 samplesheetdir=/Volumes/MiSeqSampleSheets
 logdir=$HOME/DMS/openBIS
+SERVER_IP=$(grep "^SERVER_IP" "$HOME/.pybis/uzhsrv.ini" | cut -d "=" -f2)
+
+# Check if the MiSeqi100 volume is mounted
+if [ ! -d "/Volumes/MiSeqi100" ]; then
+    echo "SMB share not found. Attempting to mount..." >> "$logdir"/backup2timavo.log
+    
+    osascript -e 'mount volume "smb://SERVER_IP/MiSeqi100"'
+    
+    # Wait to give it time to mount
+    sleep 5
+fi
+
+# Double check that it actually mounted before running rsync
+if [ ! -d "/Volumes/MiSeqi100" ]; then
+    echo "ERROR: Failed to mount SMB share. Aborting backup." >> "$logdir"/backup2timavo.err
+    exit 1
+fi
+
+# Check if the MiSeqSampleSheets volume is mounted
+if [ ! -d "/Volumes/MiSeqSampleSheets" ]; then
+    echo "SMB share not found. Attempting to mount..." >> "$logdir"/backup2timavo.log
+    
+    osascript -e 'mount volume "smb://SERVER_IP/MiSeqSampleSheets"'
+    
+    # Wait to give it time to mount
+    sleep 5
+fi
+
+# Double check that it actually mounted before running rsync
+if [ ! -d "/Volumes/MiSeqSampleSheets" ]; then
+    echo "ERROR: Failed to mount SMB share. Aborting backup." >> "$logdir"/backup2timavo.err
+    exit 1
+fi
 
 # define these globally so no need to pass it as a function parameter
 headers='undefined'
