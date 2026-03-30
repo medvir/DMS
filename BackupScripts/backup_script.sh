@@ -1,8 +1,8 @@
 #!/bin/bash
-SRC=/cygdrive/D/Illumina/MiSeqOutput/
+SRC=/Volumes/MiSeqi100/MiSeqi100Outputs
 DST=/backup/MiSeq
-LOG=/cygdrive/c/Users/sbsuser/DMS/backup.log
-ERR=/cygdrive/c/Users/sbsuser/DMS/BackupScripts/backup.err
+LOG=$HOME/DMS/BackupScripts/backup.log
+ERR=$HOME/DMS/BackupScripts/backup.err
 
 echo '' >> $LOG 2>> $ERR
 echo '--------------------' >> $LOG 2>> $ERR

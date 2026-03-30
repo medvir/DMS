@@ -9,7 +9,7 @@ from pybis import Openbis
 # Configuration
 OPENBIS_URL = 'https://openbis.virology.uzh.ch/openbis/'
 config = configparser.ConfigParser()
-config.read("C:/cygwin64/home/sbsuser/.pybis/cred.ini")
+config.read(os.path.expanduser('~/.pybis/cred.ini'))
 USER = config['credentials']['username']
 PASSWORD = config['credentials']['password']
     

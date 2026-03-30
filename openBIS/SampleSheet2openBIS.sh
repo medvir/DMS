@@ -2,16 +2,16 @@
 
 #set -x  # uncomment for debugging
 
-incomingdir=/cygdrive/D/Illumina/MiSeqOutput
+incomingdir=/Volumes/MiSeqi100/MiSeqi100Outputs
 timavoDST=/data/MiSeq
-samplesheetdir=/cygdrive/I/MiSeq/MiSeqSampleSheets 
-logdir=/cygdrive/c/Users/sbsuser/DMS/openBIS
+samplesheetdir=/Volumes/MiSeqSampleSheets
+logdir=$HOME/DMS/openBIS
 
 # define these globally so no need to pass it as a function parameter
 headers='undefined'
 rundir='undefined'
 Account=''
-Investigator_Name='undefined'
+Operator='undefined'
 Experiment_Name='undefined'
 Workflow='undefined'
 Application='undefined'
@@ -28,8 +28,8 @@ timavo='n'
 write_miseq_run(){
     run_name_here=$1
     project_to_write=$2
-    datenum=${run_name_here:0:6}
-    formatted_date="20${datenum:0:2}-${datenum:2:2}-${datenum:4:2}"
+    datenum=${run_name_here:0:8}
+    formatted_date="${datenum:0:4}-${datenum:4:2}-${datenum:6:2}"
 
     payload=$(cat <<EOF
     {
@@ -39,7 +39,7 @@ write_miseq_run(){
         "sample_code": "${run_name_here#20}",
         "sample_type": "MISEQ_RUN",
         "properties": {
-            "INVESTIGATOR_NAME": "$Investigator_Name",
+            "INVESTIGATOR_NAME": "$Operator",
             "EXPERIMENT_NAME": "$Experiment_Name",
             "SAMPLE_SHEET_NAME": "$Sample_Sheet",
             "ACCOUNT": "$Account",
@@ -51,13 +51,13 @@ write_miseq_run(){
             "READ_1": "$Read1",
             "READ_2": "$Read2",
             "PHIX_CONCENTRATION": "$PhiX",
-            "RGT_Box_1": "$RGT_box1",
-            "RGT_Box_2": "$RGT_box2"
+            "RGT_Box_1": "$Reagent1",
+            "RGT_Box_2": "$Reagent2"
         }
     }
 EOF
     )
-    py "C:\Users\sbsuser\DMS\openBIS\openbis_uploader.py" "$payload"
+    python3 $HOME/DMS/openBIS/openbis_uploader.py "$payload"
 }
 
 write_miseq_sample_zero(){
@@ -65,32 +65,26 @@ write_miseq_sample_zero(){
     sample_number=0
     sample_name='Undetermined'
     run_name="$(basename $rundir)"
-    last_alignment_dir="$(ls -td ${incomingdir}/${run_name}/Alignment* | head -1 | awk -F/ '{print $NF}')"
-    fastq_dir="$(ls -td ${incomingdir}/${run_name}/${last_alignment_dir}/* | head -1 | awk -F/ '{print $NF}')"
+    last_alignment_dir="$(ls -td ${incomingdir}/${run_name}/Analysis/* | head -1 | awk -F/ '{print $NF}')"
+    fastq_dir="$(ls -td ${incomingdir}/${run_name}/Analysis/${last_alignment_dir}/Data/BCLConvert/)"
 
-    fastq_file=$incomingdir/$run_name/${last_alignment_dir}/${fastq_dir}/Fastq/${sample_name}_S${sample_number}_L001_R1_001.fastq.gz  # find and replace Data/Intensities/BaseCalls
-    fastq_file_2=$incomingdir/$run_name/${last_alignment_dir}/${fastq_dir}/Fastq/${sample_name}_S${sample_number}_L001_R2_001.fastq.gz
-    index_file=$incomingdir/$run_name/${last_alignment_dir}/${fastq_dir}/Fastq/${sample_name}_S${sample_number}_L001_I1_001.fastq.gz
-    index_file_2=$incomingdir/$run_name/${last_alignment_dir}/${fastq_dir}/Fastq/${sample_name}_S${sample_number}_L001_I2_001.fastq.gz
+    fastq_file=${fastq_dir}/fastq/${sample_name}_S${sample_number}_L001_R1_001.fastq.gz  
+    fastq_file_2=${fastq_dir}/fastq/${sample_name}_S${sample_number}_L001_R2_001.fastq.gz
+    index_file=${fastq_dir}/fastq/${sample_name}_S${sample_number}_L001_I1_001.fastq.gz
+    index_file_2=${fastq_dir}/fastq/${sample_name}_S${sample_number}_L001_I2_001.fastq.gz
 
     echo "in write_miseq_sample_zero, run name: $run_name, alignment dir: ${last_alignment_dir}, fastq dir: ${fastq_dir}"
 
     echo "Syncing to TIMAVO"
-    DST2="${timavoDST}/MiSeqOutput/${run_name}/Data/Intensities/BaseCalls/"
+    DST2="${timavoDST}/MiSeqOutput/${run_name}/"
     rsync -a --chmod=ug+rwx,o+r --rsync-path="mkdir -p $DST2 && rsync" "$fastq_file" "timavo:$DST2"
-    if [ -e "$fastq_file_2" ]; then
-        rsync --chmod=ug+rwx,o+r "$fastq_file_2" "timavo:$DST2"
-    fi
+    
     if [ -e "$index_file" ]; then
         rsync "$index_file" "timavo:$DST2"
-    fi
-    if [ -e "$index_file_2" ]; then
-        rsync "$index_file_2" "timavo:$DST2"
     fi
 
     ### To OpenBis
     sample_code="${run_name#20}-${sample_number}"
-    win_fastq_file=$(cygpath -m "$fastq_file")
 
     payload=$(cat <<EOF
     {
@@ -101,7 +95,7 @@ write_miseq_sample_zero(){
         "sample_type": "MISEQ_SAMPLE",
         "parent_sample": "${run_name#20}_METAGENOMICS",
         "dataset_type": "FASTQ",
-        "files": ["$win_fastq_file"],
+        "files": ["$fastq_file"],
         "properties": {
             "SAMPLE_ID": "$sample_number",
             "SAMPLE_NAME": "$sample_name"
@@ -109,7 +103,7 @@ write_miseq_sample_zero(){
     }
 EOF
     )
-    py "C:\Users\sbsuser\DMS\openBIS\openbis_uploader.py" "$payload"
+    python3 $HOME/DMS/openBIS/openbis_uploader.py "$payload"
 }
 
 write_miseq_sample(){
@@ -124,53 +118,43 @@ write_miseq_sample(){
     # - remove leadin and trailing whitespaces (first sed)
     # - replace punctuation characters and internal spaces with dashes
     sample_name=$(echo ${sample_line[1]} | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | tr -s '[:punct:] ' '-')
-    sample_plate=${sample_line[2]}
-    sample_well=${sample_line[3]}
-    I7_index_id=${sample_line[4]}
-    index_1=${sample_line[5]}
-    I5_index_id=${sample_line[6]}
-    index_2=${sample_line[7]}
-    description=${sample_line[9]}
-    timavo=${sample_line[14]}
+    I7_index_id=${sample_line[2]}
+    index_1=${sample_line[3]}
+    index_2=${sample_line[4]}
+    timavo=${sample_line[9]}
 
     run_name="$(basename $rundir)"
-    last_alignment_dir="$(ls -td ${incomingdir}/${run_name}/Alignment* | head -1 | awk -F/ '{print $NF}')"
-    fastq_dir="$(ls -td ${incomingdir}/${run_name}/${last_alignment_dir}/* | head -1 | awk -F/ '{print $NF}')"
+    last_alignment_dir="$(ls -td ${incomingdir}/${run_name}/Analysis/* | head -1 | awk -F/ '{print $NF}')"
+    fastq_dir="$(ls -td ${incomingdir}/${run_name}/Analysis/${last_alignment_dir}/Data/BCLConvert/)"
 
-    fastq_file=$incomingdir/$run_name/${last_alignment_dir}/${fastq_dir}/Fastq/${sample_name}_S${sample_number}_L001_R1_001.fastq.gz    # find and replace Data/Intensities/BaseCalls
-    fastq_file_2=$incomingdir/$run_name/${last_alignment_dir}/${fastq_dir}/Fastq/${sample_name}_S${sample_number}_L001_R2_001.fastq.gz
-    index_file=$incomingdir/$run_name/${last_alignment_dir}/${fastq_dir}/Fastq/${sample_name}_S${sample_number}_L001_I1_001.fastq.gz
-    index_file_2=$incomingdir/$run_name/${last_alignment_dir}/${fastq_dir}/Fastq/${sample_name}_S${sample_number}_L001_I2_001.fastq.gz
+    fastq_file=${fastq_dir}/fastq/${sample_name}_S${sample_number}_L001_R1_001.fastq.gz    
+    fastq_file_2=${fastq_dir}/fastq/${sample_name}_S${sample_number}_L001_R2_001.fastq.gz
+    index_file=${fastq_dir}/fastq/${sample_name}_S${sample_number}_L001_I1_001.fastq.gz
+    index_file_2=${fastq_dir}/fastq/${sample_name}_S${sample_number}_L001_I2_001.fastq.gz
 
     echo "in write_miseq_sample, run name: $run_name, alignment dir: ${last_alignment_dir}, fastq dir: ${fastq_dir}"
 
     if [[ $timavo == *"y"* ]]; then
         echo "Syncing to TIMAVO"
-        DST2="${timavoDST}/MiSeqOutput/${run_name}/Data/Intensities/BaseCalls/"
+        DST2="${timavoDST}/MiSeqOutput/${run_name}/"
         rsync -a --chmod=ug+rwx,o+r --rsync-path="mkdir -p $DST2 && rsync" "$fastq_file" "timavo:$DST2"
-        if [ -e "$fastq_file_2" ]; then
-            rsync --chmod=ug+rwx,o+r "$fastq_file_2" "timavo:$DST2"
-        fi
+        
         if [ -e "$index_file" ]; then
             rsync "$index_file" "timavo:$DST2"
         fi
-        if [ -e "$index_file_2" ]; then
-            rsync "$index_file_2" "timavo:$DST2"
-        fi
 
-      else
+    else
         echo "Not syncing to TIMAVO"
     fi
 
     ### To OpenBis
 
     sample_code="${run_name#20}-${sample_number}"
-    project="${sample_line[8]}"
+    project="${sample_line[5]}"
 
     # Link with the parent
     project_up=$(echo "$project" | tr '[:lower:]' '[:upper:]')
     parent_link="${run_name#20}_${project_up}"
-    win_fastq_file=$(cygpath -m "$fastq_file")
 
     payload=$(cat <<EOF
     {
@@ -181,7 +165,7 @@ write_miseq_sample(){
         "sample_type": "MISEQ_SAMPLE",
         "parent_sample": "$parent_link",
         "dataset_type": "FASTQ",
-        "files": ["$win_fastq_file"],
+        "files": ["$fastq_file"],
         "properties": {
             "SAMPLE_ID": "$sample_number",
             "SAMPLE_NAME": "$sample_name",
@@ -189,14 +173,13 @@ write_miseq_sample(){
             "SAMPLE_WELL": "$sample_well",
             "I7_INDEX_ID": "$I7_index_id",
             "INDEX_1": "$index_1",
-            "I5_INDEX_ID": "$I5_index_id",
             "INDEX_2": "$index_2",
             "DESCRIPTION": "$description"
         }
     }
 EOF
     )
-    py "C:\Users\sbsuser\DMS\openBIS\openbis_uploader.py" "$payload"
+    python3 $HOME/DMS/openBIS/openbis_uploader.py "$payload"
 }
 
 write_experiment_generic(){
@@ -225,16 +208,14 @@ write_experiment_generic(){
         "parent_sample": "$sequencing_sample",
         "properties": {
             "SAMPLE_NAME": "${sample_line[1]}",
-            "VIRUS": "${sample_line[10]}",
-            "GENOTYPE": "${sample_line[11]}",
-            "TARGET_REGION": "${sample_line[12]}",
-            "VIRAL_LOAD": "${sample_line[13]}",
-            "APL": "${sample_line[15]}"
+            "VIRUS": "${sample_line[6]}",
+            "TARGET_REGION": "${sample_line[7]}",
+            "APL": "${sample_line[8]}"
         }
     }
 EOF
     )
-    py "C:\Users\sbsuser\DMS\openBIS\openbis_uploader.py" "$payload"
+    python3 $HOME/DMS/openBIS/openbis_uploader.py "$payload"
 }
 
 write_resistance_test() { 
@@ -263,7 +244,7 @@ process_runs(){
     run_name=$(basename "$rundir")
 
     # get sample sheet name
-    Sample_Sheet_tmp=$(cat "$rundir/RunParameters.xml" | grep SampleSheetName | sed 's/^.*<SampleSheetName>//' | sed 's/<\/SampleSheetName>// ' | tr -d '\r')
+    Sample_Sheet_tmp=$(cat "$rundir/SampleSheet.csv" | grep InputContainerIdentifier | sed 's/InputContainerIdentifier,//')
     Sample_Sheet=`echo $Sample_Sheet_tmp | sed 's/\\r//g'`
     tr -d '\r' < "$samplesheetdir/$Sample_Sheet.csv" > sample_sheet.tmp
     chmod 777 sample_sheet.tmp
@@ -286,55 +267,48 @@ process_runs(){
     ### with a newline
     while IFS=',' read -r -a line || [[ -n "$line" ]]
     do
-        # if [[ "$count_openbis" == 0 ]]
-        # then
-        #     break
-        # fi
-        if [[ ${line[0]} =~ ^\[[[:alpha:]]*\] ]]
-        then
+        if [[ ${line[0]} =~ ^\[[[:alpha:]_]*\] ]]; then 
             section=${line[0]}
+        fi
 
         ### [Header] section
-        elif [[ $section == "[Header]" && ${line[1]} ]]
-        then
-            if [[ "${line[0]}" == "Experiment Name" ]]; then
-                Experiment_Name=${line[1]}
+        if [[ $section == "[Header]" && ${line[1]} ]]; then
+            header_value=$(echo "${line[1]}" | tr -d '\r')
+            if [[ "${line[0]}" == "RunName" ]]; then
+                Experiment_Name=${header_value}
                 echo "Experiment_Name line: $Experiment_Name , 0: ${line[0]}, 1: ${line[1]}"
             else
-                declare "${line[0]}=${line[1]}"
+                declare "${line[0]}=${header_value}"
             fi
-        ### [Reads] section for read 1
-        elif [[ $section == "[Reads]" && ${line[0]} =~ ^[0-9]+$ && $r -eq 0 ]]
-        then
-            # [Header] has now been parsed, if openbis != y then stop parsing
-            # this run and go to next
+        ### [Reads] section
+        elif [[ $section == "[Reads]" ]]; then 
+            # Check for openbis=n flag *before* processing any reads info
             if [[ "$openbis" == "n" ]]; then
                 break
             fi
-            r=1
-            # echo $section ${line[0]}
-            Read1=${line[0]}
+            
+            ### [Reads] section for read 1
+            if [[ ${line[0]} == "Read1Cycles" && $r -eq 0 && ${line[1]} =~ ^[0-9]+$ ]]; then
+                r=1
+                Read1=${line[1]}
+            
+            # [Reads] section for read 2
+            elif [[ ${line[0]} == "Read2Cycles" && $r -eq 1 && ${line[1]} =~ ^[0-9]+$ ]]; then
+                r=2
+                Read2=${line[1]}
+            fi
 
-        ### [Reads] section for read 2
-        elif [[ $section == "[Reads]" && ${line[0]} =~ ^[0-9]+$ && $r -eq 1 ]]
-        then
-            r=2
-            # echo $section ${line[0]}
-            Read2=${line[0]}
-
-        ### [Data] section headers
-        elif [[ $section == "[Data]" && ${line[1]} && $s -eq 0 ]]
-        then
+        ### [BCLConvert_Data] section headers
+        elif [[ $section == "[BCLConvert_Data]" && ${line[0]} == "Sample_ID" && $s -eq 0 ]]; then
             headers=( "${line[@]}" )
             echo -e "  Headers found:" "${headers[@]}"
             ((s+=1))
 
-        ### [Data] section values
+        ### [BCLConvert_Data] section values
         ## HERE ADD RETROSEQ and write_retroseq_resistance_test
-        elif [[ $section == "[Data]" && ${line[1]} && $s -gt 0 ]]
-        then
+        elif [[ $section == "[BCLConvert_Data]" && ${line[0]} =~ ^[0-9]+$ && $s -gt 0 ]]; then
             # 1. CREATE PARENT RUN FIRST (If it hasn't been created yet)
-            case ${line[8]} in
+            case ${line[5]} in
               Antibodies)
                 if [ "$anti_sample" = false ]; then 
                     echo "WRITING ANTIBODIES RUN"
@@ -391,7 +365,7 @@ process_runs(){
             # 2. NOW UPLOAD THE SAMPLES (Children)
             write_miseq_sample line[@]
 
-            case ${line[8]} in
+            case ${line[5]} in
               Resistance)
                 write_resistance_test "${line[@]}"
                 ;;
@@ -408,7 +382,7 @@ process_runs(){
     done < sample_sheet.tmp
 
     echo "Syncing SampleSheet to timavo"
-    smpshdst="${timavoDST}/MiSeqOutput/${run_name}/Data/Intensities/BaseCalls/"
+    smpshdst="${timavoDST}/MiSeqOutput/${run_name}/"
     rsync -av --chmod=ug+rwx --rsync-path="mkdir -p $smpshdst && rsync" sample_sheet.tmp "timavo:$smpshdst/SampleSheet.csv"
     rm sample_sheet.tmp
 
@@ -416,7 +390,7 @@ process_runs(){
 
     # reset [Header] and [Reads] information
     Investigator_Name='undefined'
-    Experiment_Name='undefined'
+    Operator='undefined'
     Sample_Sheet='undefined'
     # Date='undefined'
     Workflow='undefined'
