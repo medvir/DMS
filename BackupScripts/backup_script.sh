@@ -1,5 +1,5 @@
 #!/bin/bash
-SRC=/cygdrive/D/Illumina/MiSeqOutput
+SRC=/cygdrive/D/Illumina/MiSeqOutput/
 DST=/backup/MiSeq
 LOG=/cygdrive/c/Users/sbsuser/DMS/backup.log
 ERR=/cygdrive/c/Users/sbsuser/DMS/BackupScripts/backup.err
@@ -7,7 +7,7 @@ ERR=/cygdrive/c/Users/sbsuser/DMS/BackupScripts/backup.err
 echo '' >> $LOG 2>> $ERR
 echo '--------------------' >> $LOG 2>> $ERR
 date >> $LOG 2>> $ERR
-rsync -av --stats --exclude='Thumbnail_Images' --exclude='Logs' $SRC sbsuser@virologysrv10.uzh.ch:$DST &>> $LOG 2>> $ERR
+rsync -av --stats --exclude='Thumbnail_Images' --exclude='Logs' $SRC vir26:$DST &>> $LOG 2>> $ERR
 echo 'backed up' >> $LOG 2>> $ERR
 date >> $LOG 2>> $ERR
 echo '--------------------' >> $LOG 2>> $ERR
