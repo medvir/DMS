@@ -91,8 +91,10 @@ def upload_to_openbis(data):
     # Force analysis/mapping flags to False if sample already exists
     if sample_exists:
         print("Resetting 'analysed' and 'mapped' flags to False for re-analysis...")
-        clean_props['analysed'] = False
-        clean_props['mapped'] = False
+        if sample_type in ['MISEQ_SAMPLE', 'RESISTANCE_TEST']:
+            clean_props['mapped'] = False
+        if sample_type == 'RESISTANCE_TEST':
+            clean_props['analysed'] = False
     
     sample.set_props(clean_props)
     sample.save()
