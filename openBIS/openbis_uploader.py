@@ -92,9 +92,9 @@ def upload_to_openbis(data):
     if sample_exists:
         print("Resetting 'analysed' and 'mapped' flags to False for re-analysis...")
         if sample_type in ['MISEQ_SAMPLE', 'RESISTANCE_TEST']:
-            clean_props['mapped'] = False
+            clean_props['mapped'] = None
         if sample_type == 'RESISTANCE_TEST':
-            clean_props['analysed'] = False
+            clean_props['analysed'] = None
     
     sample.set_props(clean_props)
     sample.save()
