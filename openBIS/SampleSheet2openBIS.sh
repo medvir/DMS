@@ -58,6 +58,17 @@ RGT_box2='undefined'
 openbis='n'
 timavo='n'
 
+trigger_openbis_upload() {
+    local payload_data="$1"
+    
+    # Check if the flag contains 'y' or 'Y'
+    if [[ "$openbis" == *"y"* || "$openbis" == *"Y"* ]]; then
+        python3 $HOME/DMS/openBIS/openbis_uploader.py "$payload_data"
+    else
+        echo "openbis flag is set to 'n'. Skipping OpenBIS upload."
+    fi
+}
+
 write_miseq_run(){
     run_name_here=$1
     project_to_write=$2
@@ -90,7 +101,7 @@ write_miseq_run(){
     }
 EOF
     )
-    python3 $HOME/DMS/openBIS/openbis_uploader.py "$payload"
+    trigger_openbis_upload "$payload"
 }
 
 write_miseq_sample_zero(){
@@ -136,7 +147,7 @@ write_miseq_sample_zero(){
     }
 EOF
     )
-    python3 $HOME/DMS/openBIS/openbis_uploader.py "$payload"
+    trigger_openbis_upload "$payload"
 }
 
 write_miseq_sample(){
@@ -212,7 +223,7 @@ write_miseq_sample(){
     }
 EOF
     )
-    python3 $HOME/DMS/openBIS/openbis_uploader.py "$payload"
+    trigger_openbis_upload "$payload"
 }
 
 write_experiment_generic(){
@@ -248,7 +259,7 @@ write_experiment_generic(){
     }
 EOF
     )
-    python3 $HOME/DMS/openBIS/openbis_uploader.py "$payload"
+    trigger_openbis_upload "$payload"
 }
 
 write_resistance_test() { 
