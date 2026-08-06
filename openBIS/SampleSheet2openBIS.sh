@@ -274,6 +274,12 @@ process_runs(){
         return
     fi
 
+    # Force the script to wait until the MiSeq is 100% finished
+    if ! find "$rundir" -name "FastqSummaryF1L1.txt" | grep -q .; then
+        echo "Run $rundir is still sequencing. Skipping for now..."
+        return
+    fi
+
     run_name=$(basename "$rundir")
 
     # get sample sheet name
