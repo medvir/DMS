@@ -271,7 +271,7 @@ process_runs(){
     # get sample sheet name
     Sample_Sheet_tmp=$(cat "$rundir/RunParameters.xml" | grep SampleSheetName | sed 's/^.*<SampleSheetName>//' | sed 's/<\/SampleSheetName>// ' | tr -d '\r')
     Sample_Sheet=`echo $Sample_Sheet_tmp | sed 's/\\r//g'`
-    tr -d '\r' < "$samplesheetdir/$Sample_Sheet.csv" > sample_sheet.tmp
+    cat "$samplesheetdir/$Sample_Sheet.csv" | sed '1s/^\xEF\xBB\xBF//' | tr -d '\r' > sample_sheet.tmp
     chmod 777 sample_sheet.tmp
     echo "In process_runs, sample sheet: ${Sample_Sheet} "
     
