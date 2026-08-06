@@ -332,10 +332,6 @@ process_runs(){
             fi
         ### [Reads] section
         elif [[ $section == "[Reads]" ]]; then 
-            # Check for openbis=n flag *before* processing any reads info
-            if [[ "$openbis" == "n" ]]; then
-                break
-            fi
             
             ### [Reads] section for read 1
             if [[ ${line[0]} == "Read1Cycles" && $r -eq 0 && ${line[1]} =~ ^[0-9]+$ ]]; then
