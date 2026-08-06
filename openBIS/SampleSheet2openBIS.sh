@@ -25,6 +25,17 @@ RGT_box2='undefined'
 openbis='n'
 timavo='n'
 
+trigger_openbis_upload() {
+    local payload_data="$1"
+    
+    # Check if the flag contains 'y' or 'Y'
+    if [[ "$openbis" == *"y"* || "$openbis" == *"Y"* ]]; then
+        py "C:\Users\sbsuser\DMS\openBIS\openbis_uploader.py" "$payload_data"
+    else
+        echo "openbis flag is set to 'n'. Skipping OpenBIS upload."
+    fi
+}
+
 write_miseq_run(){
     run_name_here=$1
     project_to_write=$2
@@ -57,7 +68,7 @@ write_miseq_run(){
     }
 EOF
     )
-    py "C:\Users\sbsuser\DMS\openBIS\openbis_uploader.py" "$payload"
+    trigger_openbis_upload "$payload"
 }
 
 write_miseq_sample_zero(){
@@ -109,7 +120,7 @@ write_miseq_sample_zero(){
     }
 EOF
     )
-    py "C:\Users\sbsuser\DMS\openBIS\openbis_uploader.py" "$payload"
+    trigger_openbis_upload "$payload"
 }
 
 write_miseq_sample(){
@@ -196,7 +207,7 @@ write_miseq_sample(){
     }
 EOF
     )
-    py "C:\Users\sbsuser\DMS\openBIS\openbis_uploader.py" "$payload"
+    trigger_openbis_upload "$payload"
 }
 
 write_experiment_generic(){
@@ -234,7 +245,7 @@ write_experiment_generic(){
     }
 EOF
     )
-    py "C:\Users\sbsuser\DMS\openBIS\openbis_uploader.py" "$payload"
+    trigger_openbis_upload "$payload"
 }
 
 write_resistance_test() { 
@@ -312,11 +323,6 @@ process_runs(){
         ### [Reads] section for read 1
         elif [[ $section == "[Reads]" && ${line[0]} =~ ^[0-9]+$ && $r -eq 0 ]]
         then
-            # [Header] has now been parsed, if openbis != y then stop parsing
-            # this run and go to next
-            if [[ "$openbis" == "n" ]]; then
-                break
-            fi
             r=1
             # echo $section ${line[0]}
             Read1=${line[0]}
